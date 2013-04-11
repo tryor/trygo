@@ -77,6 +77,9 @@ func (app *App) buildTemplate() {
 
 func (app *App) Run() {
 	app.buildTemplate()
+	if app.config.HttpAddr == "" {
+		app.config.HttpAddr = "0.0.0.0"
+	}
 	addr := fmt.Sprintf("%s:%d", app.config.HttpAddr, app.config.HttpPort)
 	var err error
 	if app.config.UseFcgi {
