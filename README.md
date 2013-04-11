@@ -1,4 +1,4 @@
-## Beego
+## SSSS
 =======
 ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层http服务。没有会话管理模块，不支持正则路由。支持如下特性：MVC,方法路由，JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。
 
