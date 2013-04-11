@@ -1,6 +1,6 @@
 ## SSSS
 =======
-ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层http服务。没有会话管理模块，不支持正则路由。支持如下特性：MVC,方法路由，JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。
+ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层http服务。没有会话管理模块，不支持正则路由。支持如下特性：MVC,类型内方法路由，JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。
 
 ssss HTTP and WEB services of framework for Golang。It is mainly used to develop the underlying HTTP service,No session management module, does not support the regular route。Support feature:MVC,Methods the routing,JSON/JSON(JQueryCallback)/XML service,template,Static file output。
 
@@ -49,11 +49,12 @@ func main() {
 ## Router
 ============
 ```go
-ssss.Register("GET", "/", &MainController{}, "Func1")
-ssss.Register("POST", "/", &MainController{}, "Func2")
-ssss.Register("GET|POST", "/", &MainController{}, "Func3")
-ssss.Register("PUT", "/", &MainController{}, "Func4")
-ssss.Register("*", "/", &MainController{}, "Func5")
+ssss.Register("GET", "/f1", &MainController{}, "Func1")
+ssss.Register("POST", "/f2", &MainController{}, "Func2")
+ssss.Register("GET|POST", "/f3", &MainController{}, "Func3")
+ssss.Register("PUT", "/f4", &MainController{}, "Func4")
+ssss.Register("GET|POST", "/admin/login", &AdminController{}, "Login")
+ssss.Register("*", "/admin/index", &AdminController{}, "Index")
 ```
 
 
