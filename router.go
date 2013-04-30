@@ -28,7 +28,7 @@ func NewControllerRegistor() *ControllerRegistor {
 //method-http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
 //path-URL path
 //name - method on the container
-func (this *ControllerRegistor) Add(methods string, path string, c ControllerInterface, name string) {
+func (this *ControllerRegistor) Add(methods string, path string, c IController, name string) {
 	if c == nil {
 		panic("controller is empty")
 	}

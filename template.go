@@ -3,7 +3,7 @@ package ssss
 import (
 	"errors"
 	"fmt"
-	"github.com/russross/blackfriday"
+	//"github.com/russross/blackfriday"
 	"html/template"
 	"os"
 	"path"
@@ -25,7 +25,7 @@ func NewTemplateRegistor() *TemplateRegistor {
 	tr.tplFuncMap = make(template.FuncMap)
 	tr.TemplateExt = make([]string, 0)
 	tr.TemplateExt = append(tr.TemplateExt, "tpl", "html")
-	tr.tplFuncMap["markdown"] = MarkDown
+	//tr.tplFuncMap["markdown"] = MarkDown
 	tr.tplFuncMap["dateformat"] = DateFormat
 	tr.tplFuncMap["date"] = Date
 	tr.tplFuncMap["compare"] = Compare
@@ -34,13 +34,12 @@ func NewTemplateRegistor() *TemplateRegistor {
 	return tr
 }
 
-// MarkDown parses a string in MarkDown format and returns HTML. Used by the template parser as "markdown"
-func MarkDown(raw string) (output template.HTML) {
-	input := []byte(raw)
-	bOutput := blackfriday.MarkdownBasic(input)
-	output = template.HTML(string(bOutput))
-	return
-}
+//func MarkDown(raw string) (output template.HTML) {
+//	input := []byte(raw)
+//	bOutput := blackfriday.MarkdownBasic(input)
+//	output = template.HTML(string(bOutput))
+//	return
+//}
 
 func Substr(s string, start, length int) string {
 	bt := []rune(s)
@@ -56,7 +55,6 @@ func Substr(s string, start, length int) string {
 	return string(bt[start:end])
 }
 
-// Html2str() returns escaping text convert from html
 func Html2str(html string) string {
 	src := string(html)
 
@@ -83,13 +81,11 @@ func Html2str(html string) string {
 	return strings.TrimSpace(src)
 }
 
-// DateFormat takes a time and a layout string and returns a string with the formatted date. Used by the template parser as "dateformat"
 func DateFormat(t time.Time, layout string) (datestring string) {
 	datestring = t.Format(layout)
 	return
 }
 
-// Date takes a PHP like date func to Go's time fomate
 func Date(t time.Time, format string) (datestring string) {
 	patterns := []string{
 		// year

@@ -62,5 +62,66 @@ ssss.Register("*", "/admin/index", &AdminController{}, "Index")
 ============
 ssss.SetStaticPath("/", "static/webroot/")
 
+## Render
+============
 
+All the default render:
 
+```go
+func (c *Controller) Render(contentType string, data []byte)
+func (c *Controller) RenderHtml(content string)
+func (c *Controller) RenderText(content string)
+func (c *Controller) RenderJson(data interface{})
+func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{})
+func (c *Controller) RenderXml(data interface{})
+func (c *Controller) RenderTemplate(contentType ...string)
+```
+
+## View / Template
+============
+
+template view path set
+-----------
+```go
+var cfg ssss.Config
+cfg.TemplatePath = "static/templates"
+```
+template names
+-----------
+ssss will find the template from cfg.TemplatePath. the file is set by user like：
+```go
+c.TplNames = "admin/add.tpl"
+```
+then beego will find the file in the path:static/templates/admin/add.tpl
+
+if you don't set TplNames,sss will find like this:
+```go
+c.TplNames = c.ChildName + "/" + c.MethodName + "." + c.TplExt
+```
+
+render template
+-----------
+```go
+c.TplNames = "admin/add.tpl"
+c.Data["data"] = you data
+c.RenderTemplate()
+```
+
+## Config
+============
+```go
+type Config struct {
+	HttpAddr     string
+	HttpPort     int
+	UseFcgi      bool
+	RecoverPanic bool
+	RunMode      int8 //0=prod，1=dev
+	TemplatePath string
+}
+
+const RUNMODE_PROD int8 = 0
+const RUNMODE_DEV int8 = 1
+```
+
+## Thank End
+============

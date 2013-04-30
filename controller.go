@@ -13,7 +13,7 @@ import (
 	//"strings"
 )
 
-type ControllerInterface interface {
+type IController interface {
 	Init(app *App, ct *Context, cn string, mn string)
 	Prepare()
 	Finish()

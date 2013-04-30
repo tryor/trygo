@@ -41,12 +41,12 @@ func NewApp(config *Config) *App {
 //method-http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
 //path-URL path
 //name - method on the container
-func (app *App) Register(method string, path string, c ControllerInterface, name string) *App {
+func (app *App) Register(method string, path string, c IController, name string) *App {
 	app.Handlers.Add(method, path, c, name)
 	return app
 }
 
-func Register(method string, path string, c ControllerInterface, name string) *App {
+func Register(method string, path string, c IController, name string) *App {
 	SSSSApp.Register(method, path, c, name)
 	return SSSSApp
 }
