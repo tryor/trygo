@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	//"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
 	"strconv"
-	//"strings"
 )
 
 type IController interface {
@@ -75,11 +73,21 @@ func (c *Controller) RenderJson(data interface{}) {
 }
 
 func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{}) {
-	content, err := json.Marshal(data)
-	if err != nil {
-		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		return
+	var content []byte
+	switch data.(type) {
+	case string:
+		content = []byte(data.(string))
+	case []byte:
+		content = data.([]byte)
+	default:
+		var err error
+		content, err = json.Marshal(data)
+		if err != nil {
+			http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
+
 	bjson := []byte(jsoncallback)
 	bjson = append(bjson, '(')
 	bjson = append(bjson, content...)
