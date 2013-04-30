@@ -81,13 +81,13 @@ func (c *Controller) RenderTemplate(contentType ...string)
 ============
 
 template view path set
------------
+
 ```go
 var cfg ssss.Config
 cfg.TemplatePath = "static/templates"
 ```
 template names
------------
+
 ssss will find the template from cfg.TemplatePath. the file is set by user like：
 ```go
 c.TplNames = "admin/add.tpl"
@@ -100,7 +100,7 @@ c.TplNames = c.ChildName + "/" + c.MethodName + "." + c.TplExt
 ```
 
 render template
------------
+
 ```go
 c.TplNames = "admin/add.tpl"
 c.Data["data"] = you data
