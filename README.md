@@ -1,6 +1,6 @@
 ## SSSS
 =======
-ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层http服务。没有会话管理模块，不支持正则路由。支持如下特性：MVC,类型内方法路由，JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。
+ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层高性能高可靠性的http服务。没有会话管理模块，不支持正则路由。支持如下特性：MVC,类型内方法路由，JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。
 
 ssss HTTP and WEB services of framework for Golang。It is mainly used to develop the underlying HTTP service,No session management module, does not support the regular route。Support feature:MVC,Methods the routing,JSON/JSON(JQueryCallback)/XML service,template,Static file output。
 
@@ -92,7 +92,7 @@ ssss will find the template from cfg.TemplatePath. the file is set by user like�
 ```go
 c.TplNames = "admin/add.tpl"
 ```
-then beego will find the file in the path:static/templates/admin/add.tpl
+then ssss will find the file in the path:static/templates/admin/add.tpl
 
 if you don't set TplNames,sss will find like this:
 ```go
