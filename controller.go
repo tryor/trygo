@@ -49,8 +49,12 @@ func (c *Controller) Redirect(url string, code int) {
 	c.Ctx.Redirect(code, url)
 }
 
+func (c *Controller) Error(code int, message string) {
+	c.Ctx.Error(code, message)
+}
+
 func (c *Controller) Render(contentType string, data []byte) {
-	c.Ctx.SetHeader("Content-Length", strconv.Itoa(len(data)), true)
+	c.Ctx.SetHeader("Content-Length", strconv.Itoa(len(data)))
 	c.Ctx.ContentType(contentType)
 	c.Ctx.ResponseWriter.Write(data)
 }

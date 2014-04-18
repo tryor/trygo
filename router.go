@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -17,18 +18,19 @@ type controllerInfo struct {
 }
 
 type ControllerRegistor struct {
-	routermap map[string]*controllerInfo
-	app       *App
+	routermap  map[string]*controllerInfo
+	patternmap map[*regexp.Regexp]*controllerInfo //key为编译后的正则模式
+	app        *App
 }
 
 func NewControllerRegistor() *ControllerRegistor {
-	return &ControllerRegistor{routermap: make(map[string]*controllerInfo)}
+	return &ControllerRegistor{routermap: make(map[string]*controllerInfo), patternmap: make(map[*regexp.Regexp]*controllerInfo)}
 }
 
 //method-http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
 //path-URL path
 //name - method on the container
-func (this *ControllerRegistor) Add(methods string, path string, c IController, name string) {
+func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, regex ...bool) {
 	if c == nil {
 		panic("controller is empty")
 	}
@@ -56,7 +58,18 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 	}
 	//log.Debugf("ROUTER PATH [%v] METHOD [%v]", path, name)
 
-	this.routermap[path] = routerinfo
+	//fmt.Println(regex)
+	if len(regex) == 0 || !regex[0] {
+		this.routermap[path] = routerinfo
+	} else {
+		//regex router
+		r, err := regexp.Compile(path)
+		if err != nil {
+			panic(err)
+		}
+		this.patternmap[r] = routerinfo
+		//fmt.Println(r)
+	}
 }
 
 // AutoRoute
@@ -79,30 +92,24 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 		}
 	}()
 
+	path := r.URL.Path
+
 	//http service route
-	router, ok := this.routermap[r.URL.Path]
+	router, ok := this.routermap[path]
 	if ok && router != nil {
 		if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
-			vc := reflect.New(router.controllerType)
+			this.call(router, rw, r)
+			return
+		}
+	}
 
-			init := vc.MethodByName("Init")
-			in := make([]reflect.Value, 4)
-			ct := &Context{ResponseWriter: rw, Request: r}
-			in[0] = reflect.ValueOf(this.app)
-			in[1] = reflect.ValueOf(ct)
-			in[2] = reflect.ValueOf(router.controllerType.Name())
-			in[3] = reflect.ValueOf(router.name)
-			init.Call(in)
-
-			in = make([]reflect.Value, 0)
-			method := vc.MethodByName("Prepare")
-			method.Call(in)
-
-			method = vc.MethodByName(router.name)
-			method.Call(in)
-
-			method = vc.MethodByName("Finish")
-			method.Call(in)
+	//regex router
+	for regex, router := range this.patternmap {
+		if !regex.MatchString(path) {
+			continue
+		}
+		if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
+			this.call(router, rw, r)
 			return
 		}
 	}
@@ -112,9 +119,9 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 		if strings.HasPrefix(r.URL.Path, p) {
 			var file string
 			if p == "/" {
-				file = dir + r.URL.Path
+				file = dir + path
 			} else {
-				file = dir + r.URL.Path[len(p):]
+				file = dir + path[len(p):]
 			}
 			http.ServeFile(rw, r, file)
 			return
@@ -122,6 +129,32 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	}
 
 	http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
+}
+
+func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWriter, r *http.Request) {
+	//if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
+	vc := reflect.New(router.controllerType)
+
+	init := vc.MethodByName("Init")
+	in := make([]reflect.Value, 4)
+	ct := &Context{ResponseWriter: rw, Request: r}
+	in[0] = reflect.ValueOf(this.app)
+	in[1] = reflect.ValueOf(ct)
+	in[2] = reflect.ValueOf(router.controllerType.Name())
+	in[3] = reflect.ValueOf(router.name)
+	init.Call(in)
+
+	in = make([]reflect.Value, 0)
+	method := vc.MethodByName("Prepare")
+	method.Call(in)
+
+	method = vc.MethodByName(router.name)
+	method.Call(in)
+
+	method = vc.MethodByName("Finish")
+	method.Call(in)
+	//return
+	//}
 }
 
 func (this *ControllerRegistor) hasMethod(router *controllerInfo, method int8) bool {
