@@ -133,6 +133,7 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 
 func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWriter, r *http.Request) {
 	//if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
+
 	vc := reflect.New(router.controllerType)
 
 	init := vc.MethodByName("Init")
@@ -147,10 +148,8 @@ func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWri
 	in = make([]reflect.Value, 0)
 	method := vc.MethodByName("Prepare")
 	method.Call(in)
-
 	method = vc.MethodByName(router.name)
 	method.Call(in)
-
 	method = vc.MethodByName("Finish")
 	method.Call(in)
 	//return

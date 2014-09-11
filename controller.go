@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	//log "github.com/cihub/seelog"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
+	"strings"
 )
 
 type IController interface {
@@ -135,4 +139,100 @@ func (c *Controller) RenderTemplate(contentType ...string) {
 	} else {
 		c.Render("html", icontent)
 	}
+}
+
+//fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
+//如果是json格式结果，支持jsoncallback
+func (c *Controller) RenderError(fmt string, err interface{}) {
+	//fmt := c.Ctx.Request.FormValue("fmt")
+	fmt = strings.ToLower(fmt)
+	switch fmt {
+	case "":
+		fallthrough
+	case "json":
+		c.renderJsonError(err)
+	case "xml":
+		c.renderXmlError(err)
+	default:
+		c.renderJsonError(err)
+	}
+}
+
+//fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
+//如果是json格式结果，支持jsoncallback
+func (c *Controller) RenderSucceed(fmt string, data interface{}) {
+	//fmt := c.Ctx.Request.FormValue("fmt")
+	fmt = strings.ToLower(fmt)
+	switch fmt {
+	case "":
+		fallthrough
+	case "json":
+		c.renderJsonSucceed(data)
+	case "xml":
+		c.renderXmlSucceed(data)
+	default:
+		c.renderJsonSucceed(data)
+	}
+}
+
+func (c *Controller) renderJsonError(err interface{}) {
+	//log.Fatal(err)
+	rs := convertErrorResult(err)
+
+	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
+	if jsoncallback != "" {
+		c.RenderJQueryCallback(jsoncallback, rs)
+	} else {
+		c.RenderJson(rs)
+	}
+}
+
+func (c *Controller) renderJsonSucceed(data interface{}) {
+	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
+	if jsoncallback != "" {
+		c.RenderJQueryCallback(jsoncallback, succeedResult(data))
+	} else {
+		c.RenderJson(succeedResult(data))
+	}
+}
+
+func (c *Controller) renderXmlError(err interface{}) {
+	//log.Fatal(err)
+	rs := convertErrorResult(err)
+	c.RenderXml(rs)
+}
+
+func (c *Controller) renderXmlSucceed(data interface{}) {
+	c.RenderXml(succeedResult(data))
+}
+
+func (c *Controller) ParseForm() (url.Values, error) {
+	//defer func() {
+	//	if c.Ctx.Request.Body != nil {
+	//		c.Ctx.Request.Body.Close()
+	//	}
+	//}()
+
+	var form url.Values
+	contentType := c.Ctx.Request.Header.Get("Content-Type")
+	if contentType != "application/x-www-form-urlencoded" && c.Ctx.Request.ContentLength > 0 && c.Ctx.Request.Body != nil {
+		body := make([]byte, c.Ctx.Request.ContentLength)
+		_, err := io.ReadFull(c.Ctx.Request.Body, body)
+		if err != nil {
+			return nil, err
+		}
+		bodystr := string(body)
+		form, err = url.ParseQuery(bodystr)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := c.Ctx.Request.ParseForm()
+		if err != nil {
+			return nil, err
+		}
+		form = c.Ctx.Request.Form
+		//log.Info("access:", form)
+	}
+	return form, nil
 }

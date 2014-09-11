@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"time"
 )
 
 const VERSION = "0.0.1"
@@ -93,19 +94,34 @@ func (app *App) Run() {
 	}
 	addr := fmt.Sprintf("%s:%d", app.config.HttpAddr, app.config.HttpPort)
 	var err error
-	if app.config.UseFcgi {
-		l, e := net.Listen("tcp", addr)
-		if e != nil {
-			log.Print("Listen: ", e)
+
+	for {
+		if app.config.UseFcgi {
+			l, e := net.Listen("tcp", addr)
+			if e != nil {
+				log.Print("Listen: ", e)
+			}
+			//log.Print("UseFcgi, fcgi.Serve")
+			err = fcgi.Serve(l, app.Handlers)
+		} else {
+			//log.Print("http.ListenAndServe")
+			//err = http.ListenAndServe(addr, app.Handlers)
+			err = httpListenAndServe(addr, app.Handlers, app.config.ReadTimeout, app.config.WriteTimeout)
 		}
-		err = fcgi.Serve(l, app.Handlers)
-	} else {
-		err = http.ListenAndServe(addr, app.Handlers)
+		if err != nil {
+			log.Print("ListenAndServe: ", err)
+			//panic(err)
+		}
+		time.Sleep(time.Second * 2)
 	}
-	if err != nil {
-		log.Print("ListenAndServe: ", err)
-		panic(err)
+}
+
+func httpListenAndServe(addr string, handler http.Handler, readTimeout time.Duration, writeTimeout time.Duration) error {
+	if readTimeout == 0 {
+		readTimeout = time.Second * 5
 	}
+	server := &http.Server{Addr: addr, Handler: handler, ReadTimeout: readTimeout, WriteTimeout: writeTimeout}
+	return server.ListenAndServe()
 }
 
 func Run(config *Config) {

@@ -1,8 +1,8 @@
 ## SSSS
 =======
-ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：MVC,类型内方法路由，JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。暂时不支持会话管理模块和正则路由。
+ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。暂时不支持会话管理模块。
 
-ssss HTTP and WEB services of framework for Golang。It is mainly used to develop the underlying HTTP service,Support feature:MVC,Methods the routing,JSON/JSON(JQueryCallback)/XML service,template,Static file output。Temporarily does not support session management module and a regular routing。
+ssss HTTP and WEB services of framework for Golang。It is mainly used to develop the underlying HTTP service,Support feature:MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML service,template,Static file output。Temporarily does not support session management module。
 
 ssss is licensed under the Apache Licence, Version 2.0
 (http://www.apache.org/licenses/LICENSE-2.0.html).
@@ -20,15 +20,39 @@ Here is the canonical "Hello, world" example app for ssss:
 package main
 
 import (
+	"fmt"
 	"github.com/trygo/ssss"
+	"runtime"
 )
 
 type MainController struct {
 	ssss.Controller
 }
 
+type ResultData struct {
+	Hello string  `json:"hello" xml:"hello"`
+	Val1  int     `json:"val1" xml:"val1"`
+	Val2  bool    `json:"val2" xml:"val2"`
+	Val3  float64 `json:"val3" xml:"val3"`
+	Val4  string  `json:"val4,omitempty" xml:"val4,omitempty"`
+	Val5  string  `json:"val5" xml:"val5"`
+}
+
 func (this *MainController) Hello() {
-	this.RenderText("hello world")
+	//this.RenderText("hello world")
+
+	form, err := this.ParseForm()
+	if err != nil {
+		this.RenderError(this.Ctx.Request.FormValue("fmt"), err)
+	}
+	var rs ResultData
+	rs.Hello = "hello world"
+	rs.Val1 = 100
+	rs.Val2 = true
+	rs.Val3 = float64(100.001)
+
+	//this.RenderSucceed(form.Get("fmt"), "hello world")
+	this.RenderSucceed(form.Get("fmt"), &rs)
 }
 
 func (this *MainController) Hi() {
@@ -36,14 +60,35 @@ func (this *MainController) Hi() {
 }
 
 func main() {
-	ssss.Register("GET|POST", "/", &MainController{}, "Hello")
-	ssss.Register("GET|POST", "/hi", &MainController{}, "Hi")
-	
-	var cfg ssss.Config
-	//cfg.HttpAddr = "0.0.0.0"
-	cfg.HttpPort = 8080
-	ssss.Run(&cfg)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	go ListenAndServe(9080)
+	go ListenAndServe(9081)
+
+	fmt.Println("Test: http://127.0.0.1:9080/hello")
+	fmt.Println("Test: http://127.0.0.1:9080/hello?fmt=xml")
+
+	select {}
 }
+
+func ListenAndServe(port int) {
+	var cfg ssss.Config
+	cfg.HttpPort = port
+	cfg.RecoverPanic = true
+	cfg.TemplatePath = "static/templates"
+	cfg.RunMode = ssss.RUNMODE_PROD
+
+	app := ssss.NewApp(&cfg)
+	app.Register("GET|POST", "/hello", &MainController{}, "Hello")
+	app.Register("GET|POST", "/hi", &MainController{}, "Hi")
+
+	app.SetStaticPath("/", "static/webcontent/")
+
+	fmt.Println("HTTP ListenAndServe AT ", port)
+	app.Run()
+}
+
+
 ```
 
 ## Router
@@ -55,6 +100,10 @@ ssss.Register("GET|POST", "/f3", &MainController{}, "Func3")
 ssss.Register("PUT", "/f4", &MainController{}, "Func4")
 ssss.Register("GET|POST", "/admin/login", &AdminController{}, "Login")
 ssss.Register("*", "/admin/index", &AdminController{}, "Index")
+
+ssss.RegisterPattern("GET|POST", "/.*", &MainController{}, "Func5")
+ssss.RegisterPattern("GET|POST", "/admin/.*", &AdminController{}, "Index")
+
 ```
 
 
@@ -75,6 +124,10 @@ func (c *Controller) RenderJson(data interface{})
 func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{})
 func (c *Controller) RenderXml(data interface{})
 func (c *Controller) RenderTemplate(contentType ...string)
+
+func (c *Controller) RenderSucceed(fmt string, data interface{})
+func (c *Controller) RenderError(fmt string, err interface{})
+
 ```
 
 ## View / Template
@@ -117,6 +170,8 @@ type Config struct {
 	RecoverPanic bool
 	RunMode      int8 //0=prod，1=dev
 	TemplatePath string
+	ReadTimeout  time.Duration // maximum duration before timing out read of the request, 默认:5*time.Second(5秒超时)
+	WriteTimeout time.Duration // maximum duration before timing out write of the response, 默认:0(不超时)	
 }
 
 const RUNMODE_PROD int8 = 0
