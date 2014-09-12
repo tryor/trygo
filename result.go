@@ -12,14 +12,14 @@ type Result struct {
 	Info    interface{} `json:"info,omitempty" xml:"info,omitempty"` //具体结果数据, 只有当code为0时，才设置此属性值
 }
 
-func errorResult(code int, msgs ...interface{}) *Result {
+func NewErrorResult(code int, msgs ...interface{}) *Result {
 	if len(msgs) > 0 {
 		return &Result{Code: code, Message: fmt.Sprint(msgs...)}
 	}
 	return &Result{Code: code}
 }
 
-func succeedResult(info interface{}) *Result {
+func NewSucceedResult(info interface{}) *Result {
 	return &Result{Code: 0, Info: info}
 }
 
@@ -31,10 +31,10 @@ func convertErrorResult(err interface{}) *Result {
 	case Result:
 		return &e
 	case error:
-		return errorResult(ERROR_CODE_RUNTIME, e.Error())
+		return NewErrorResult(ERROR_CODE_RUNTIME, e.Error())
 	}
 	if err != nil {
-		return errorResult(ERROR_CODE_RUNTIME, fmt.Sprint(err))
+		return NewErrorResult(ERROR_CODE_RUNTIME, fmt.Sprint(err))
 	}
-	return errorResult(ERROR_CODE_RUNTIME, "运行时异常")
+	return NewErrorResult(ERROR_CODE_RUNTIME, "运行时异常")
 }

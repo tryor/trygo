@@ -77,7 +77,7 @@ func (c *Controller) RenderJson(data interface{}) {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	c.Render("json", content)
+	c.Render("application/json", content)
 }
 
 func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{}) {
@@ -100,7 +100,7 @@ func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{})
 	bjson = append(bjson, '(')
 	bjson = append(bjson, content...)
 	bjson = append(bjson, ')')
-	c.Render("json", bjson)
+	c.Render("application/json", bjson)
 }
 
 func (c *Controller) RenderXml(data interface{}) {
@@ -190,9 +190,9 @@ func (c *Controller) renderJsonError(err interface{}) {
 func (c *Controller) renderJsonSucceed(data interface{}) {
 	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
 	if jsoncallback != "" {
-		c.RenderJQueryCallback(jsoncallback, succeedResult(data))
+		c.RenderJQueryCallback(jsoncallback, NewSucceedResult(data))
 	} else {
-		c.RenderJson(succeedResult(data))
+		c.RenderJson(NewSucceedResult(data))
 	}
 }
 
@@ -203,7 +203,7 @@ func (c *Controller) renderXmlError(err interface{}) {
 }
 
 func (c *Controller) renderXmlSucceed(data interface{}) {
-	c.RenderXml(succeedResult(data))
+	c.RenderXml(NewSucceedResult(data))
 }
 
 func (c *Controller) ParseForm() (url.Values, error) {

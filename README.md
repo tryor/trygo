@@ -16,6 +16,36 @@ To install:
 ## Quick Start
 ============
 Here is the canonical "Hello, world" example app for ssss:
+
+```go
+package main
+
+import (
+    "github.com/trygo/ssss"
+)
+
+type MainController struct {
+    ssss.Controller
+}
+
+func (this *MainController) Hello() {
+    this.RenderText("hello world")
+}
+
+func (this *MainController) Hi() {
+    this.RenderHtml("<html><body>Hi</body></html>")
+}
+
+func main() {
+    ssss.Register("GET|POST", "/", &MainController{}, "Hello")
+    ssss.Register("GET|POST", "/hi", &MainController{}, "Hi")
+
+    var cfg ssss.Config
+    cfg.HttpPort = 8080
+    ssss.Run(&cfg)
+}
+```
+A better understanding of the SSSS example:
 ```go
 package main
 
@@ -23,6 +53,7 @@ import (
 	"fmt"
 	"github.com/trygo/ssss"
 	"runtime"
+	//"trygo/ssss"
 )
 
 type MainController struct {
@@ -38,9 +69,7 @@ type ResultData struct {
 	Val5  string  `json:"val5" xml:"val5"`
 }
 
-func (this *MainController) Hello() {
-	//this.RenderText("hello world")
-
+func (this *MainController) Example1() {
 	form, err := this.ParseForm()
 	if err != nil {
 		this.RenderError(this.Ctx.Request.FormValue("fmt"), err)
@@ -50,13 +79,30 @@ func (this *MainController) Hello() {
 	rs.Val1 = 100
 	rs.Val2 = true
 	rs.Val3 = float64(100.001)
-
-	//this.RenderSucceed(form.Get("fmt"), "hello world")
 	this.RenderSucceed(form.Get("fmt"), &rs)
 }
 
-func (this *MainController) Hi() {
-	this.RenderHtml("<html><body>Hi</body></html>")
+func (this *MainController) Example2() {
+	form, err := this.ParseForm()
+	if err != nil {
+		errrs := ssss.NewErrorResult(ssss.ERROR_CODE_RUNTIME, fmt.Sprintf("parse parameter error, %v", err))
+		this.RenderError(this.Ctx.Request.FormValue("fmt"), errrs)
+	}
+	var rsdata ResultData
+	rsdata.Hello = "hello world"
+	rsdata.Val1 = 100
+	rsdata.Val2 = true
+	rsdata.Val3 = float64(100.001)
+
+	sucrs := ssss.NewSucceedResult(&rsdata)
+	this.RenderSucceed(form.Get("fmt"), sucrs)
+}
+
+func (this *MainController) Example3() {
+	this.TplNames = "admin/index.tpl" //The actual position(cfg.TemplatePath+this.TplNames)：static/templates/admin/index.tp
+	this.Data["nodes"] = nil          //service.GetNodes()
+	this.Data["insts"] = nil          //service.GetInstances()
+	this.RenderTemplate()
 }
 
 func main() {
@@ -65,9 +111,11 @@ func main() {
 	go ListenAndServe(9080)
 	go ListenAndServe(9081)
 
-	fmt.Println("Test: http://127.0.0.1:9080/hello")
-	fmt.Println("Test: http://127.0.0.1:9080/hello?fmt=xml")
-
+	fmt.Println("Test: http://127.0.0.1:9080/e1")
+	fmt.Println("Test: http://127.0.0.1:9080/e1?fmt=json")
+	fmt.Println("Test: http://127.0.0.1:9080/e2")
+	fmt.Println("Test: http://127.0.0.1:9080/e2?fmt=xml")
+	fmt.Println("Test: http://127.0.0.1:9080/e3")
 	select {}
 }
 
@@ -76,18 +124,17 @@ func ListenAndServe(port int) {
 	cfg.HttpPort = port
 	cfg.RecoverPanic = true
 	cfg.TemplatePath = "static/templates"
-	cfg.RunMode = ssss.RUNMODE_PROD
 
 	app := ssss.NewApp(&cfg)
-	app.Register("GET|POST", "/hello", &MainController{}, "Hello")
-	app.Register("GET|POST", "/hi", &MainController{}, "Hi")
+	app.Register("GET|POST", "/e1", &MainController{}, "Example1")
+	app.Register("GET|POST", "/e2", &MainController{}, "Example2")
+	app.Register("GET|POST", "/e3", &MainController{}, "Example3")
 
 	app.SetStaticPath("/", "static/webcontent/")
 
 	fmt.Println("HTTP ListenAndServe AT ", port)
 	app.Run()
 }
-
 
 ```
 
