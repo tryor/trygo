@@ -69,11 +69,33 @@ type ResultData struct {
 	Val5  string  `json:"val5" xml:"val5"`
 }
 
+func (this *MainController) Example(p1, p2 string) {
+
+	fmt.Printf("p1=%v\n", p1)
+	fmt.Printf("p2=%v\n", p2)
+
+	var rs ResultData
+	rs.Hello = "hello world"
+	rs.Val1 = 100
+	rs.Val2 = true
+	rs.Val3 = float64(100.001)
+	rs.Val4 = p1
+	rs.Val5 = p2
+
+	this.RenderSucceed("json", &rs)
+}
+
 func (this *MainController) Example1() {
 	form, err := this.ParseForm()
 	if err != nil {
 		this.RenderError(this.Ctx.Request.FormValue("fmt"), err)
 	}
+
+	p1 := form.Get("p1")
+	p2 := form.Get("p2")
+	fmt.Print("p1=", p1)
+	fmt.Print("p2=", p2)
+
 	var rs ResultData
 	rs.Hello = "hello world"
 	rs.Val1 = 100
@@ -109,8 +131,9 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	go ListenAndServe(9080)
-	go ListenAndServe(9081)
+	//go ListenAndServe(9081)
 
+	fmt.Println("Test: http://127.0.0.1:9080/e")
 	fmt.Println("Test: http://127.0.0.1:9080/e1")
 	fmt.Println("Test: http://127.0.0.1:9080/e1?fmt=json")
 	fmt.Println("Test: http://127.0.0.1:9080/e2")
@@ -126,6 +149,8 @@ func ListenAndServe(port int) {
 	cfg.TemplatePath = "static/templates"
 
 	app := ssss.NewApp(&cfg)
+
+	app.Register("GET|POST", "/e", &MainController{}, "Example", "p1, p2 string")
 	app.Register("GET|POST", "/e1", &MainController{}, "Example1")
 	app.Register("GET|POST", "/e2", &MainController{}, "Example2")
 	app.Register("GET|POST", "/e3", &MainController{}, "Example3")
