@@ -42,24 +42,32 @@ func NewApp(config *Config) *App {
 //method-http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
 //path-URL path
 //name - method on the container
-func (app *App) Register(method string, path string, c IController, name string) *App {
-	app.Handlers.Add(method, path, c, name)
+func (app *App) Register(method string, path string, c IController, name string, params ...string) *App {
+	ps := ""
+	if len(params) > 0 {
+		ps = params[0]
+	}
+	app.Handlers.Add(method, path, c, name, ps)
 	return app
 }
 
 //采用正则路由
-func (app *App) RegisterPattern(method string, pattern string, c IController, name string) *App {
-	app.Handlers.Add(method, pattern, c, name, true)
+func (app *App) RegisterPattern(method string, pattern string, c IController, name string, params ...string) *App {
+	ps := ""
+	if len(params) > 0 {
+		ps = params[0]
+	}
+	app.Handlers.Add(method, pattern, c, name, ps, true)
 	return app
 }
 
-func Register(method string, path string, c IController, name string) *App {
-	SSSSApp.Register(method, path, c, name)
+func Register(method string, path string, c IController, name string, params ...string) *App {
+	SSSSApp.Register(method, path, c, name, params...)
 	return SSSSApp
 }
 
-func RegisterPattern(method string, path string, c IController, name string) *App {
-	SSSSApp.RegisterPattern(method, path, c, name)
+func RegisterPattern(method string, path string, c IController, name string, params ...string) *App {
+	SSSSApp.RegisterPattern(method, path, c, name, params...)
 	return SSSSApp
 }
 

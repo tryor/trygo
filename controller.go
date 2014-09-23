@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	//log "github.com/cihub/seelog"
-	"io"
+	//"errors"
+	//"io"
+	//"fmt"
 	"io/ioutil"
 	"log"
+	//"mime"
 	"net/http"
 	"net/url"
 	"path"
@@ -207,22 +210,28 @@ func (c *Controller) renderXmlSucceed(data interface{}) {
 }
 
 func (c *Controller) ParseForm() (url.Values, error) {
-	//defer func() {
-	//	if c.Ctx.Request.Body != nil {
-	//		c.Ctx.Request.Body.Close()
-	//	}
-	//}()
+	if c.Ctx.Form != nil {
+		return c.Ctx.Form, nil
+	}
+	form, err := parseForm(c)
+	if err != nil {
+		return nil, err
+	}
+	c.Ctx.Form = form
+	return form, nil
+}
 
-	var form url.Values
+func parseForm(c *Controller) (url.Values, error) {
+
 	contentType := c.Ctx.Request.Header.Get("Content-Type")
-	if contentType != "application/x-www-form-urlencoded" && c.Ctx.Request.ContentLength > 0 && c.Ctx.Request.Body != nil {
-		body := make([]byte, c.Ctx.Request.ContentLength)
-		_, err := io.ReadFull(c.Ctx.Request.Body, body)
-		if err != nil {
-			return nil, err
-		}
-		bodystr := string(body)
-		form, err = url.ParseQuery(bodystr)
+	//application/x-www-form-urlencoded
+	//ct, _, err := mime.ParseMediaType(contentType)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if ct == "multipart/form-data" {
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		err := c.Ctx.Request.ParseMultipartForm(defaultMaxMemory)
 		if err != nil {
 			return nil, err
 		}
@@ -231,8 +240,14 @@ func (c *Controller) ParseForm() (url.Values, error) {
 		if err != nil {
 			return nil, err
 		}
-		form = c.Ctx.Request.Form
-		//log.Info("access:", form)
 	}
-	return form, nil
+
+	return c.Ctx.Request.Form, nil
 }
+
+const (
+	maxValueLength   = 4096
+	maxHeaderLines   = 1024
+	chunkSize        = 4 << 10  // 4 KB chunks
+	defaultMaxMemory = 32 << 20 // 32 MB
+)

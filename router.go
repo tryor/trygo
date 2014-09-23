@@ -4,17 +4,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
 type controllerInfo struct {
-	methods        []int8
+	methods        []int8 //HTTP方法
 	all            bool
 	controllerType reflect.Type
-	name           string
+	name           string       //函数名称
+	typ            reflect.Type //函数类型
+	pnames         []string     //函数参数名称列表
 }
 
 type ControllerRegistor struct {
@@ -27,10 +31,11 @@ func NewControllerRegistor() *ControllerRegistor {
 	return &ControllerRegistor{routermap: make(map[string]*controllerInfo), patternmap: make(map[*regexp.Regexp]*controllerInfo)}
 }
 
-//method-http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
-//path-URL path
+//method - http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
+//path- URL path
 //name - method on the container
-func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, regex ...bool) {
+//params - parameter name list
+func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, params string, regex ...bool) {
 	if c == nil {
 		panic("controller is empty")
 	}
@@ -40,12 +45,32 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 
 	appntv := reflect.ValueOf(c)
 	m := appntv.MethodByName(name)
-	if !m.IsValid() {
+	ctype := reflect.TypeOf(c)
+	mtype, ok := ctype.MethodByName(name)
+	if !m.IsValid() && !ok {
 		panic(fmt.Sprintf("ROUTER METHOD [%v] not find or invalid", name))
 	}
 
+	//检查参数类型
+	for i := 1; i < mtype.Type.NumIn(); i++ {
+		ptype := mtype.Type.In(i)
+		if (ptype.Kind() != reflect.String && ptype.Kind() != reflect.Slice) || (ptype.Kind() == reflect.Slice && ptype.Elem().Kind() != reflect.String) {
+			panic(fmt.Sprintf("the parameter type is not string, %v", ptype))
+		}
+	}
+
 	ms := strings.Split(methods, "|")
-	routerinfo := &controllerInfo{methods: make([]int8, len(ms)), all: false, name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type()}
+	routerinfo := &controllerInfo{methods: make([]int8, len(ms)), all: false, name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type(), typ: mtype.Type, pnames: make([]string, 0)}
+	params = strings.TrimSpace(params)
+	if params != "" {
+		for _, p := range strings.Split(params, ",") {
+			routerinfo.pnames = append(routerinfo.pnames, strings.SplitN(strings.TrimSpace(p), " ", 2)[0])
+		}
+	}
+
+	if mtype.Type.NumIn()-1 != len(routerinfo.pnames) {
+		panic(fmt.Sprintf("the number of parameter mismatch, %v(%v), %v(%v)", routerinfo.pnames, len(routerinfo.pnames), mtype.Type.String(), mtype.Type.NumIn()-1))
+	}
 
 	for i, m := range ms {
 		routerinfo.methods[i] = this.convMethod(strings.ToUpper(m))
@@ -145,15 +170,100 @@ func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWri
 	in[3] = reflect.ValueOf(router.name)
 	init.Call(in)
 
-	in = make([]reflect.Value, 0)
+	in0 := make([]reflect.Value, 0)
 	method := vc.MethodByName("Prepare")
-	method.Call(in)
+	method.Call(in0)
 	method = vc.MethodByName(router.name)
-	method.Call(in)
+	numIn := router.typ.NumIn()
+	inx := make([]reflect.Value, numIn-1)
+	if numIn > 1 {
+		//ParseForm() (url.Values, error)
+		parseForm := vc.MethodByName("ParseForm")
+		res := parseForm.Call(in0)
+		//println("form:", form)
+		err := res[1].Interface() //.(error)
+		if err != nil {
+			panic(err.(error))
+		}
+		form := res[0].Interface().(url.Values)
+		for i := 1; i < numIn; i++ {
+			//fmt.Println("mtype.Type.In(i):", router.typ.In(i))
+			idx := i - 1
+			inx[idx] = reflect.ValueOf(this.parseParam(form, router.pnames[idx], router.typ.In(i)))
+		}
+	}
+
+	method.Call(inx)
 	method = vc.MethodByName("Finish")
-	method.Call(in)
+	method.Call(in0)
 	//return
 	//}
+}
+
+func (this *ControllerRegistor) parseParam(form url.Values, pname string, ptype reflect.Type) interface{} {
+	vp := reflect.Indirect(reflect.New(ptype))
+
+	if reflect.Slice == ptype.Kind() {
+		kind := ptype.Elem().Kind()
+		vals := form[pname]
+		for _, str := range vals {
+			v := reflect.Indirect(reflect.New(ptype.Elem()))
+			parseValue(kind, str, &v)
+			vp = reflect.Append(vp, v)
+		}
+	} else {
+		parseValue(ptype.Kind(), form.Get(pname), &vp)
+	}
+
+	return vp.Interface()
+}
+
+//在vp中返回值
+func parseValue(kind reflect.Kind, val string, vp *reflect.Value) {
+
+	switch kind {
+	case reflect.String:
+		vp.SetString(val)
+	case reflect.Bool:
+		val, err := strconv.ParseBool(getValue(val, "false"))
+		if err != nil {
+			panic(err)
+		}
+		vp.SetBool(val)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		val, err := strconv.ParseInt(getValue(val, "0"), 10, 0)
+		if err != nil {
+			panic(err)
+		}
+		vp.SetInt(val)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		val, err := strconv.ParseUint(getValue(val, "0"), 10, 0)
+		if err != nil {
+			panic(err)
+		}
+		vp.SetUint(val)
+	case reflect.Float32:
+		val, err := strconv.ParseFloat(getValue(val, "0.0"), 32)
+		if err != nil {
+			panic(err)
+		}
+		vp.SetFloat(val)
+	case reflect.Float64:
+		val, err := strconv.ParseFloat(getValue(val, "0.0"), 64)
+		if err != nil {
+			panic(err)
+		}
+		vp.SetFloat(val)
+	default:
+		panic("the parameter type is not supported")
+	}
+}
+
+func getValue(val string, def string) string {
+	if val == "" {
+		return def
+	}
+	return val
 }
 
 func (this *ControllerRegistor) hasMethod(router *controllerInfo, method int8) bool {

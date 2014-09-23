@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -11,6 +12,8 @@ import (
 type Context struct {
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
+	Multipart      bool
+	Form           url.Values
 }
 
 func (ctx *Context) Abort(status int, body string) {
