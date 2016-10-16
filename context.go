@@ -34,9 +34,10 @@ func (ctx *Context) NotFound(message string) {
 	ctx.Error(404, message)
 }
 
-func (ctx *Context) Error(code int, message string) {
+func (ctx *Context) Error(code int, message string) (err error) {
 	ctx.ResponseWriter.WriteHeader(code)
-	ctx.ResponseWriter.Write([]byte(message))
+	_, err = ctx.ResponseWriter.Write([]byte(message))
+	return
 }
 
 func (ctx *Context) ContentType(typ string) {

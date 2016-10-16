@@ -125,9 +125,9 @@ func (app *App) Run() {
 }
 
 func httpListenAndServe(addr string, handler http.Handler, readTimeout time.Duration, writeTimeout time.Duration) error {
-	if readTimeout == 0 {
-		readTimeout = time.Second * 5
-	}
+	//if readTimeout == 0 {
+	//	readTimeout = time.Second * 5
+	//}
 	server := &http.Server{Addr: addr, Handler: handler, ReadTimeout: readTimeout, WriteTimeout: writeTimeout}
 	return server.ListenAndServe()
 }
