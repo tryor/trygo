@@ -181,7 +181,7 @@ func (c *Controller) RenderSucceed(fmt string, data interface{}) (err error) {
 
 func (c *Controller) renderJsonError(err interface{}) (e error) {
 	//log.Fatal(err)
-	rs := convertErrorResult(err)
+	rs := ConvertErrorResult(err)
 
 	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
 	if jsoncallback != "" {
@@ -202,7 +202,7 @@ func (c *Controller) renderJsonSucceed(data interface{}) (err error) {
 
 func (c *Controller) renderXmlError(err interface{}) (e error) {
 	//log.Fatal(err)
-	rs := convertErrorResult(err)
+	rs := ConvertErrorResult(err)
 	return c.RenderXml(rs)
 }
 
