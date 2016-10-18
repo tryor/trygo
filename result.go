@@ -5,6 +5,9 @@ import (
 	"strconv"
 )
 
+//是否自动构建消息
+var AutoBuildMessage bool = true
+
 type Result struct {
 	Code    int         `json:"code" xml:"code"` //0为成功，其它值为错误码
 	Message string      `json:"message,omitempty" xml:"message,omitempty"`
@@ -16,10 +19,14 @@ func (r *Result) String() string {
 }
 
 func NewErrorResult(code int, msgs ...interface{}) *Result {
-	if len(msgs) > 0 {
-		return &Result{Code: code, Message: fmt.Sprint(msgs...)}
+	msg := ""
+	if AutoBuildMessage {
+		msg = ERROR_INFO_MAP[code]
+		if len(msgs) > 0 {
+			msg = fmt.Sprint(msg, ",", fmt.Sprint(msgs...))
+		}
 	}
-	return &Result{Code: code}
+	return &Result{Code: code, Message: msg}
 }
 
 func NewSucceedResult(info interface{}) *Result {
