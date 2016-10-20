@@ -101,10 +101,9 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			if !this.app.config.RecoverPanic {
-				panic(err)
-			} else {
-				log.Print("Handler crashed with error,", err)
+			log.Println("Handler crashed with error,", err)
+			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			if this.app.config.RecoverPanic {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)
 					if !ok {
@@ -112,7 +111,6 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 					}
 					log.Print(file, line)
 				}
-				http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 			}
 		}
 	}()
