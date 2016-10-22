@@ -20,7 +20,8 @@ import (
 
 type IController interface {
 	Init(app *App, ct *Context, cn string, mn string)
-	Prepare()
+	//如果返回false, 将终止此请求
+	Prepare() bool
 	Finish()
 }
 
@@ -32,6 +33,8 @@ type Controller struct {
 	TplNames   string
 	TplExt     string
 	App        *App
+	//panic抛出的异常，默认为nil, 如果不想继续抛出异常， 设置c.PanicInfo = nil
+	PanicInfo interface{}
 }
 
 func (c *Controller) Init(app *App, ctx *Context, cn string, mn string) {
@@ -40,16 +43,15 @@ func (c *Controller) Init(app *App, ctx *Context, cn string, mn string) {
 	c.ChildName = cn
 	c.MethodName = mn
 	c.Ctx = ctx
-	c.TplNames = ""
+	//c.TplNames = ""
 	c.TplExt = "tpl"
 }
 
-func (c *Controller) Prepare() {
-
+func (c *Controller) Prepare() bool {
+	return true
 }
 
 func (c *Controller) Finish() {
-
 }
 
 func (c *Controller) Redirect(url string, code int) {
@@ -223,14 +225,7 @@ func (c *Controller) ParseForm() (url.Values, error) {
 }
 
 func parseForm(c *Controller) (url.Values, error) {
-
 	contentType := c.Ctx.Request.Header.Get("Content-Type")
-	//application/x-www-form-urlencoded
-	//ct, _, err := mime.ParseMediaType(contentType)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if ct == "multipart/form-data" {
 	if strings.HasPrefix(contentType, "multipart/form-data") {
 		err := c.Ctx.Request.ParseMultipartForm(defaultMaxMemory)
 		if err != nil {

@@ -100,6 +100,11 @@ func (app *App) Run() {
 	if app.config.HttpAddr == "" {
 		app.config.HttpAddr = "0.0.0.0"
 	}
+
+	//if app.config.FormatParamName == "" {
+	//	app.config.FormatParamName = "_fmt"
+	//}
+
 	addr := fmt.Sprintf("%s:%d", app.config.HttpAddr, app.config.HttpPort)
 	var err error
 

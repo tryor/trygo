@@ -101,9 +101,9 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("Handler crashed with error,", err)
+			log.Printf("Internal Server Error, %v", err)
 			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
-			if this.app.config.RecoverPanic {
+			if this.app.config.PrintPanic {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)
 					if !ok {
@@ -155,8 +155,6 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 }
 
 func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWriter, r *http.Request) {
-	//if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
-
 	vc := reflect.New(router.controllerType)
 
 	init := vc.MethodByName("Init")
@@ -170,32 +168,40 @@ func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWri
 
 	in0 := make([]reflect.Value, 0)
 	method := vc.MethodByName("Prepare")
-	method.Call(in0)
+	if !method.Call(in0)[0].Interface().(bool) {
+		return
+	}
+
 	method = vc.MethodByName(router.name)
 	numIn := router.typ.NumIn()
 	inx := make([]reflect.Value, numIn-1)
 	if numIn > 1 {
-		//ParseForm() (url.Values, error)
 		parseForm := vc.MethodByName("ParseForm")
 		res := parseForm.Call(in0)
-		//println("form:", form)
-		err := res[1].Interface() //.(error)
+		err := res[1].Interface()
 		if err != nil {
 			panic(err.(error))
 		}
 		form := res[0].Interface().(url.Values)
 		for i := 1; i < numIn; i++ {
-			//fmt.Println("mtype.Type.In(i):", router.typ.In(i))
 			idx := i - 1
 			inx[idx] = reflect.ValueOf(this.parseParam(form, router.pnames[idx], router.typ.In(i)))
 		}
 	}
 
+	defer func() {
+		panicInfoField := vc.Elem().FieldByName("PanicInfo")
+		er := recover()
+		if er != nil {
+			panicInfoField.Set(reflect.ValueOf(er))
+		}
+		method = vc.MethodByName("Finish")
+		method.Call(in0)
+		if er != nil && !panicInfoField.IsNil() {
+			panic(er)
+		}
+	}()
 	method.Call(inx)
-	method = vc.MethodByName("Finish")
-	method.Call(in0)
-	//return
-	//}
 }
 
 func (this *ControllerRegistor) parseParam(form url.Values, pname string, ptype reflect.Type) interface{} {
