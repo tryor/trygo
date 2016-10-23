@@ -103,7 +103,7 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 		if err := recover(); err != nil {
 			log.Printf("Internal Server Error, %v", err)
 			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
-			if this.app.config.PrintPanic {
+			if this.app.Config.PrintPanic {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)
 					if !ok {

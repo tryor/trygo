@@ -24,7 +24,7 @@ func init() {
 
 type App struct {
 	Handlers         *ControllerRegistor
-	config           *Config
+	Config           *Config
 	StaticDirs       map[string]string
 	TemplateRegistor *TemplateRegistor
 }
@@ -32,7 +32,7 @@ type App struct {
 func NewApp(config *Config) *App {
 	cr := NewControllerRegistor()
 	app := &App{Handlers: cr,
-		config:           config,
+		Config:           config,
 		StaticDirs:       make(map[string]string),
 		TemplateRegistor: NewTemplateRegistor()}
 	cr.app = app
@@ -90,26 +90,26 @@ func AddFuncMap(key string, funname interface{}) error {
 }
 
 func (app *App) buildTemplate() {
-	if app.config.TemplatePath != "" {
-		app.TemplateRegistor.buildTemplate(app.config.TemplatePath)
+	if app.Config.TemplatePath != "" {
+		app.TemplateRegistor.buildTemplate(app.Config.TemplatePath)
 	}
 }
 
 func (app *App) Run() {
 	app.buildTemplate()
-	if app.config.HttpAddr == "" {
-		app.config.HttpAddr = "0.0.0.0"
+	if app.Config.HttpAddr == "" {
+		app.Config.HttpAddr = "0.0.0.0"
 	}
 
 	//if app.config.FormatParamName == "" {
 	//	app.config.FormatParamName = "_fmt"
 	//}
 
-	addr := fmt.Sprintf("%s:%d", app.config.HttpAddr, app.config.HttpPort)
+	addr := fmt.Sprintf("%s:%d", app.Config.HttpAddr, app.Config.HttpPort)
 	var err error
 
 	for {
-		if app.config.UseFcgi {
+		if app.Config.UseFcgi {
 			l, e := net.Listen("tcp", addr)
 			if e != nil {
 				log.Print("Listen: ", e)
@@ -119,7 +119,7 @@ func (app *App) Run() {
 		} else {
 			//log.Print("http.ListenAndServe")
 			//err = http.ListenAndServe(addr, app.Handlers)
-			err = httpListenAndServe(addr, app.Handlers, app.config.ReadTimeout, app.config.WriteTimeout)
+			err = httpListenAndServe(addr, app.Handlers, app.Config.ReadTimeout, app.Config.WriteTimeout)
 		}
 		if err != nil {
 			log.Print("ListenAndServe: ", err)
@@ -138,6 +138,6 @@ func httpListenAndServe(addr string, handler http.Handler, readTimeout time.Dura
 }
 
 func Run(config *Config) {
-	SSSSApp.config = config
+	SSSSApp.Config = config
 	SSSSApp.Run()
 }

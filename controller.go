@@ -121,7 +121,7 @@ func (c *Controller) RenderTemplate(contentType ...string) (err error) {
 	subdir := path.Dir(c.TplNames)
 	ibytes := bytes.NewBufferString("")
 
-	if c.App.config.RunMode == RUNMODE_DEV {
+	if c.App.Config.RunMode == RUNMODE_DEV {
 		c.App.buildTemplate()
 	}
 
