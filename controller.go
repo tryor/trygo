@@ -61,6 +61,9 @@ func (c *Controller) Render(contentType string, data []byte) (err error) {
 	c.Ctx.SetHeader("Content-Length", strconv.Itoa(len(data)))
 	c.Ctx.ContentType(contentType)
 	_, err = c.Ctx.ResponseWriter.Write(data)
+	if err != nil {
+		log.Printf("error:%v, data:%v\n", err, data)
+	}
 	return
 }
 
@@ -76,39 +79,26 @@ func (c *Controller) RenderJson(data interface{}) (err error) {
 	content, err := json.Marshal(data)
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		return
+		log.Printf("error:%v, data:%v\n", err, data)
+		return err
 	}
 	return c.Render("application/json", content)
 }
 
-func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{}) (e error) {
-	var content []byte
-	switch data.(type) {
-	case string:
-		content = []byte(data.(string))
-	case []byte:
-		content = data.([]byte)
-	default:
-		var err error
-		content, err = json.Marshal(data)
-		if err != nil {
-			http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-			return
-		}
+func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{}) error {
+	bjson, err := buildJQueryCallback(jsoncallback, data)
+	if err != nil {
+		log.Printf("error:%v, data:%v\n", err, data)
 	}
-
-	bjson := []byte(jsoncallback)
-	bjson = append(bjson, '(')
-	bjson = append(bjson, content...)
-	bjson = append(bjson, ')')
 	return c.Render("application/json", bjson)
 }
 
-func (c *Controller) RenderXml(data interface{}) (err error) {
+func (c *Controller) RenderXml(data interface{}) error {
 	content, err := xml.Marshal(data)
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		return
+		log.Printf("error:%v, data:%v\n", err, data)
+		return err
 	}
 	return c.Render("xml", content)
 }
@@ -142,69 +132,45 @@ func (c *Controller) RenderTemplate(contentType ...string) (err error) {
 	}
 }
 
-//fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
-//如果是json格式结果，支持jsoncallback
-func (c *Controller) RenderError(fmt string, err interface{}) (e error) {
-	//fmt := c.Ctx.Request.FormValue("fmt")
-	fmt = strings.ToLower(fmt)
+func (c *Controller) RenderData(fmt string, data []byte) error {
 	switch fmt {
 	case "":
 		fallthrough
 	case "json":
-		return c.renderJsonError(err)
+		return c.Render("application/json", data)
 	case "xml":
-		return c.renderXmlError(err)
+		return c.Render("xml", data)
 	default:
-		return c.renderJsonError(err)
+		return c.Render("application/json", data)
 	}
+}
+
+//fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
+//如果是json格式结果，支持jsoncallback
+func (c *Controller) RenderError(fmt string, errdata interface{}) (e error) {
+	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
+	//fmt = strings.ToLower(fmt)
+	content, err := BuildError(errdata, fmt, jsoncallback)
+	if err != nil {
+		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, errdata)
+		return err
+	}
+	return c.RenderData(fmt, content)
 }
 
 //fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
 //如果是json格式结果，支持jsoncallback
 func (c *Controller) RenderSucceed(fmt string, data interface{}) (err error) {
-	//fmt := c.Ctx.Request.FormValue("fmt")
-	fmt = strings.ToLower(fmt)
-	switch fmt {
-	case "":
-		fallthrough
-	case "json":
-		return c.renderJsonSucceed(data)
-	case "xml":
-		return c.renderXmlSucceed(data)
-	default:
-		return c.renderJsonSucceed(data)
-	}
-}
-
-func (c *Controller) renderJsonError(err interface{}) (e error) {
-	//log.Fatal(err)
-	rs := ConvertErrorResult(err)
-
 	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
-	if jsoncallback != "" {
-		return c.RenderJQueryCallback(jsoncallback, rs)
-	} else {
-		return c.RenderJson(rs)
+	//fmt = strings.ToLower(fmt)
+	content, err := BuildSucceed(data, fmt, jsoncallback)
+	if err != nil {
+		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, data)
+		return err
 	}
-}
-
-func (c *Controller) renderJsonSucceed(data interface{}) (err error) {
-	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
-	if jsoncallback != "" {
-		return c.RenderJQueryCallback(jsoncallback, NewSucceedResult(data))
-	} else {
-		return c.RenderJson(NewSucceedResult(data))
-	}
-}
-
-func (c *Controller) renderXmlError(err interface{}) (e error) {
-	//log.Fatal(err)
-	rs := ConvertErrorResult(err)
-	return c.RenderXml(rs)
-}
-
-func (c *Controller) renderXmlSucceed(data interface{}) (err error) {
-	return c.RenderXml(NewSucceedResult(data))
+	return c.RenderData(fmt, content)
 }
 
 func (c *Controller) ParseForm() (url.Values, error) {
@@ -242,3 +208,99 @@ const (
 	chunkSize        = 4 << 10  // 4 KB chunks
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
+
+//fmt 结果格式, 值有：json, xml
+//jsoncallback 当需要将json结果做为js函数参数时，在jsoncallback中指定函数名
+func BuildSucceed(data interface{}, fmt string, jsoncallback ...string) ([]byte, error) {
+	//fmt = strings.ToLower(fmt)
+	switch fmt {
+	case "":
+		fallthrough
+	case "json":
+		return buildJsonSucceed(data, jsoncallback...)
+	case "xml":
+		return buildXmlSucceed(data)
+	default:
+		return buildJsonSucceed(data, jsoncallback...)
+	}
+}
+
+func buildJsonSucceed(data interface{}, jsoncallback ...string) ([]byte, error) {
+	if len(jsoncallback) > 0 {
+		return buildJQueryCallback(jsoncallback[0], NewSucceedResult(data))
+	} else {
+		return buildJson(NewSucceedResult(data))
+	}
+}
+
+func buildXmlSucceed(data interface{}) ([]byte, error) {
+	return buildXml(NewSucceedResult(data))
+}
+
+func buildXml(data interface{}) ([]byte, error) {
+	content, err := xml.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
+}
+
+func buildJson(data interface{}) ([]byte, error) {
+	content, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
+}
+
+func buildJQueryCallback(jsoncallback string, data interface{}) ([]byte, error) {
+	var content []byte
+	switch data.(type) {
+	case string:
+		content = []byte(data.(string))
+	case []byte:
+		content = data.([]byte)
+	default:
+		var err error
+		content, err = json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	bjson := []byte(jsoncallback)
+	bjson = append(bjson, '(')
+	bjson = append(bjson, content...)
+	bjson = append(bjson, ')')
+	return bjson, nil
+}
+
+//fmt 结果格式, 值有：json, xml
+//jsoncallback 当需要将json结果做为js函数参数时，在jsoncallback中指定函数名
+func BuildError(err interface{}, fmt string, jsoncallback ...string) ([]byte, error) {
+	//fmt = strings.ToLower(fmt)
+	switch fmt {
+	case "":
+		fallthrough
+	case "json":
+		return buildJsonError(err)
+	case "xml":
+		return buildXmlError(err)
+	default:
+		return buildJsonError(err)
+	}
+}
+
+func buildJsonError(err interface{}, jsoncallback ...string) ([]byte, error) {
+	rs := ConvertErrorResult(err)
+	if len(jsoncallback) > 0 {
+		return buildJQueryCallback(jsoncallback[0], rs)
+	} else {
+		return buildJson(rs)
+	}
+}
+
+func buildXmlError(err interface{}) ([]byte, error) {
+	rs := ConvertErrorResult(err)
+	return buildXml(rs)
+}
