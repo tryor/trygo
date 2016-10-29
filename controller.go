@@ -147,6 +147,7 @@ func (c *Controller) RenderData(fmt string, data []byte) error {
 
 //fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
 //如果是json格式结果，支持jsoncallback
+<<<<<<< HEAD
 func (c *Controller) RenderError(fmt string, errdata interface{}) error {
 	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
 	//fmt = strings.ToLower(fmt)
@@ -158,6 +159,12 @@ func (c *Controller) RenderError(fmt string, errdata interface{}) error {
 		content, err = BuildError(errdata, fmt, jsoncallback)
 	}
 
+=======
+func (c *Controller) RenderError(fmt string, errdata interface{}) (e error) {
+	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
+	//fmt = strings.ToLower(fmt)
+	content, err := BuildError(errdata, fmt, jsoncallback)
+>>>>>>> d913fd4e243a2a6f59a580b381ead680a510c335
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, errdata)
@@ -168,6 +175,7 @@ func (c *Controller) RenderError(fmt string, errdata interface{}) error {
 
 //fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
 //如果是json格式结果，支持jsoncallback
+<<<<<<< HEAD
 func (c *Controller) RenderSucceed(fmt string, data interface{}) error {
 	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
 	//fmt = strings.ToLower(fmt)
@@ -183,6 +191,17 @@ func (c *Controller) RenderSucceed(fmt string, data interface{}) error {
 		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, data)
 		return err
 	}
+=======
+func (c *Controller) RenderSucceed(fmt string, data interface{}) (err error) {
+	jsoncallback := c.Ctx.Request.FormValue("jsoncallback")
+	//fmt = strings.ToLower(fmt)
+	content, err := BuildSucceed(data, fmt, jsoncallback)
+	if err != nil {
+		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, data)
+		return err
+	}
+>>>>>>> d913fd4e243a2a6f59a580b381ead680a510c335
 	return c.RenderData(fmt, content)
 }
 
@@ -239,7 +258,11 @@ func BuildSucceed(data interface{}, fmt string, jsoncallback ...string) ([]byte,
 }
 
 func buildJsonSucceed(data interface{}, jsoncallback ...string) ([]byte, error) {
+<<<<<<< HEAD
 	if len(jsoncallback) > 0 && jsoncallback[0] != "" {
+=======
+	if len(jsoncallback) > 0 {
+>>>>>>> d913fd4e243a2a6f59a580b381ead680a510c335
 		return buildJQueryCallback(jsoncallback[0], NewSucceedResult(data))
 	} else {
 		return buildJson(NewSucceedResult(data))
@@ -296,17 +319,29 @@ func BuildError(err interface{}, fmt string, jsoncallback ...string) ([]byte, er
 	case "":
 		fallthrough
 	case "json":
+<<<<<<< HEAD
 		return buildJsonError(err, jsoncallback...)
 	case "xml":
 		return buildXmlError(err)
 	default:
 		return buildJsonError(err, jsoncallback...)
+=======
+		return buildJsonError(err)
+	case "xml":
+		return buildXmlError(err)
+	default:
+		return buildJsonError(err)
+>>>>>>> d913fd4e243a2a6f59a580b381ead680a510c335
 	}
 }
 
 func buildJsonError(err interface{}, jsoncallback ...string) ([]byte, error) {
 	rs := ConvertErrorResult(err)
+<<<<<<< HEAD
 	if len(jsoncallback) > 0 && jsoncallback[0] != "" {
+=======
+	if len(jsoncallback) > 0 {
+>>>>>>> d913fd4e243a2a6f59a580b381ead680a510c335
 		return buildJQueryCallback(jsoncallback[0], rs)
 	} else {
 		return buildJson(rs)
