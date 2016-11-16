@@ -314,6 +314,10 @@ func (this *ControllerRegistor) parseParam(form url.Values, tags map[string]*tag
 			}
 			vp.Field(i).Set(*v)
 		}
+
+	case reflect.Map:
+		vp.Set(reflect.ValueOf(form))
+
 	default:
 		vals, ok := form[pname]
 		var val string
