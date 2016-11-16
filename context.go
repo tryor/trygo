@@ -41,11 +41,12 @@ func (ctx *Context) Error(code int, message string) (err error) {
 }
 
 func (ctx *Context) ContentType(typ string) {
-	ext := typ
-	if !strings.HasPrefix(typ, ".") {
-		ext = "." + typ
-	}
-	ctype := mime.TypeByExtension(ext)
+	//	ext := typ
+	//	if !strings.HasPrefix(typ, ".") {
+	//		ext = "." + typ
+	//	}
+	//	ctype := mime.TypeByExtension(ext)
+	ctype := getContentType(typ)
 	if ctype != "" {
 		ctx.ResponseWriter.Header().Set("Content-Type", ctype)
 	} else {
@@ -89,4 +90,12 @@ func webTime(t time.Time) string {
 		ftime = ftime[0:len(ftime)-3] + "GMT"
 	}
 	return ftime
+}
+
+func getContentType(typ string) string {
+	ext := typ
+	if !strings.HasPrefix(typ, ".") {
+		ext = "." + typ
+	}
+	return mime.TypeByExtension(ext)
 }

@@ -1,8 +1,8 @@
 ## SSSS
 =======
-ssss 是基于Golang的http、web服务框架。部份思路和源码来自于github.com/astaxie/beego。此框架的目标并不是想做一个大而全的web容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML服务，模板，静态文件输出。暂时不支持会话管理模块。
+ssss 是基于Golang的http、web服务框架。此框架的目标并不是想做一个大而全的web服务容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML结果响应支持，模板，静态文件输出。暂时不支持会话管理模块。
 
-ssss HTTP and WEB services of framework for Golang。It is mainly used to develop the underlying HTTP service,Support feature:MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML service,template,Static file output。Temporarily does not support session management module。
+ssss HTTP and WEB services of framework for Golang. It is mainly used to develop the underlying HTTP service, Support feature:MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML result response support,template,Static file output。Temporarily does not support session management module。
 
 ssss is licensed under the Apache Licence, Version 2.0
 (http://www.apache.org/licenses/LICENSE-2.0.html).
@@ -145,7 +145,7 @@ func main() {
 func ListenAndServe(port int) {
 	var cfg ssss.Config
 	cfg.HttpPort = port
-	cfg.RecoverPanic = true
+	cfg.PrintPanic = true
 	cfg.TemplatePath = "static/templates"
 
 	app := ssss.NewApp(&cfg)
@@ -178,7 +178,65 @@ ssss.RegisterPattern("GET|POST", "/admin/.*", &AdminController{}, "Index")
 
 ```
 
+## Request
+============
+```go
 
+request handler method parameter is struct, the struct field tag name is `field`,
+tag attributes will have name,limit,scope,default,require,pattern, for example:
+`field:"name,limit:20,scope:[1 2 3],default:1,require,pattern:xxxxx"`
+scope: [1 2 3] or [1~100] or [0~] or [~0] or [100~] or [~100] or [~-100 -20~-10 -1 0 1 2 3 10~20 100~]
+
+type UserForm struct {
+	Account string `field:"account,limit:20,require"` 
+	Pwd     string `field:"pwd,limit:10,require"`
+	Name    string `field:"name,limit:20"`
+	Sex     int    `field:"sex,scope:[1 2 3],default:1"` 
+	Age     uint   `field:"age,scope:[0~200]"` 
+	Email   string `field:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"` 
+	Photo   string
+}
+
+
+type MainController struct {
+	ssss.Controller
+}
+func (this *MainController) Create(userform UserForm) {
+	ssss.Logger.Info("user=%v", user)
+	//...
+	user := service.UserService.Create(userform)
+	//...
+	this.RenderSucceed("json", user)
+}
+
+ssss.Register("GET|POST", "/user/create", &MainController{}, "Create", "user UserForm")
+
+
+
+```
+```go
+request handler method parameter is base data type, support parameter tag.
+
+const (
+	accountTag = `account:"limit:20, require"`
+	pwdTag     = `pwd:"limit:10,require"`
+	nameTag    = `name:"limit:20"`
+	sexTag     = `sex:"scope:[1 2 3],default:1"`
+	ageTag     = `age:"scope:[0~200],default:18"`
+	emailTag   = `email:"limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"`
+	statureTag = `stature:"scope:[0.0~],default:0.0"`
+)
+
+func (this *MainController) Create(account, pwd, name string, sex int, age uint, email string, stature float32) {
+	//...
+	this.RenderSucceed("json", "ok")
+}
+
+
+ssss.Register("GET|POST", "/user/create", &MainController{}, "Create", "account, pwd, name string, sex int, age uint, email string, stature float32", accountTag, pwdTag, nameTag, sexTag, ageTag, emailTag, statureTag)
+
+
+```
 ## Static files
 ============
 ssss.SetStaticPath("/", "static/webroot/")

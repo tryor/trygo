@@ -58,11 +58,12 @@ func (c *Controller) Error(code int, message string) {
 }
 
 func (c *Controller) Render(contentType string, data []byte) (err error) {
-	c.Ctx.SetHeader("Content-Length", strconv.Itoa(len(data)))
-	c.Ctx.ContentType(contentType)
-	_, err = c.Ctx.ResponseWriter.Write(data)
+	err = Render(c.Ctx.ResponseWriter, contentType, data)
+	//	c.Ctx.SetHeader("Content-Length", strconv.Itoa(len(data)))
+	//	c.Ctx.ContentType(contentType)
+	//	_, err = c.Ctx.ResponseWriter.Write(data)
 	if err != nil {
-		log.Printf("error:%v, data:%v\n", err, data)
+		Logger.Error("error:%v, data:%v\n", err, data)
 	}
 	return
 }
@@ -79,7 +80,7 @@ func (c *Controller) RenderJson(data interface{}) (err error) {
 	content, err := json.Marshal(data)
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		log.Printf("error:%v, data:%v\n", err, data)
+		Logger.Error("error:%v, data:%v\n", err, data)
 		return err
 	}
 	return c.Render("application/json", content)
@@ -88,7 +89,7 @@ func (c *Controller) RenderJson(data interface{}) (err error) {
 func (c *Controller) RenderJQueryCallback(jsoncallback string, data interface{}) error {
 	bjson, err := buildJQueryCallback(jsoncallback, data)
 	if err != nil {
-		log.Printf("error:%v, data:%v\n", err, data)
+		Logger.Error("error:%v, data:%v\n", err, data)
 	}
 	return c.Render("application/json", bjson)
 }
@@ -97,7 +98,7 @@ func (c *Controller) RenderXml(data interface{}) error {
 	content, err := xml.Marshal(data)
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		log.Printf("error:%v, data:%v\n", err, data)
+		Logger.Error("error:%v, data:%v\n", err, data)
 		return err
 	}
 	return c.Render("xml", content)
@@ -133,16 +134,17 @@ func (c *Controller) RenderTemplate(contentType ...string) (err error) {
 }
 
 func (c *Controller) RenderData(fmt string, data []byte) error {
-	switch fmt {
-	case "":
-		fallthrough
-	case "json":
-		return c.Render("application/json", data)
-	case "xml":
-		return c.Render("xml", data)
-	default:
-		return c.Render("application/json", data)
-	}
+	return RenderData(c.Ctx.ResponseWriter, fmt, data)
+	//	switch fmt {
+	//	case "":
+	//		fallthrough
+	//	case "json":
+	//		return c.Render("application/json", data)
+	//	case "xml":
+	//		return c.Render("xml", data)
+	//	default:
+	//		return c.Render("application/json", data)
+	//	}
 }
 
 //fmt值指示响应结果格式，当前支持:json或xml, 默认为:json
@@ -160,7 +162,7 @@ func (c *Controller) RenderError(fmt string, errdata interface{}) error {
 
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, errdata)
+		Logger.Error("format:%v, error:%v, data:%v\n", fmt, err, errdata)
 		return err
 	}
 	return c.RenderData(fmt, content)
@@ -180,7 +182,7 @@ func (c *Controller) RenderSucceed(fmt string, data interface{}) error {
 	}
 	if err != nil {
 		http.Error(c.Ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
-		log.Printf("format:%v, error:%v, data:%v\n", fmt, err, data)
+		Logger.Error("format:%v, error:%v, data:%v\n", fmt, err, data)
 		return err
 	}
 	return c.RenderData(fmt, content)
@@ -221,6 +223,29 @@ const (
 	chunkSize        = 4 << 10  // 4 KB chunks
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
+
+func RenderData(rw http.ResponseWriter, fmt string, data []byte) error {
+	switch fmt {
+	case "":
+		fallthrough
+	case "json":
+		return Render(rw, "application/json", data)
+	case "xml":
+		return Render(rw, "xml", data)
+	default:
+		return Render(rw, "application/json", data)
+	}
+}
+
+func Render(rw http.ResponseWriter, contentType string, data []byte) error {
+	rw.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	rw.Header().Set("Content-Type", getContentType(contentType))
+	_, err := rw.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 //fmt 结果格式, 值有：json, xml
 //jsoncallback 当需要将json结果做为js函数参数时，在jsoncallback中指定函数名

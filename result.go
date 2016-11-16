@@ -3,6 +3,7 @@ package ssss
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 //是否自动构建消息
@@ -23,7 +24,7 @@ func NewErrorResult(code int, msgs ...interface{}) *Result {
 	if AutoBuildMessage {
 		msg = ERROR_INFO_MAP[code]
 		if len(msgs) > 0 {
-			msg = fmt.Sprint(msg, ",", fmt.Sprint(msgs...))
+			msg = fmt.Sprint(msg, ",", joinMsgs(msgs...))
 		}
 	}
 	return &Result{Code: code, Message: msg}
@@ -31,6 +32,14 @@ func NewErrorResult(code int, msgs ...interface{}) *Result {
 
 func NewSucceedResult(info interface{}) *Result {
 	return &Result{Code: 0, Info: info}
+}
+
+func joinMsgs(args ...interface{}) string {
+	strs := make([]string, 0, len(args)*2)
+	for _, arg := range args {
+		strs = append(strs, fmt.Sprint(arg))
+	}
+	return strings.Join(strs, ",")
 }
 
 //将错误转换为Result
@@ -46,5 +55,5 @@ func ConvertErrorResult(err interface{}) *Result {
 	if err != nil {
 		return NewErrorResult(ERROR_CODE_RUNTIME, fmt.Sprint(err))
 	}
-	return NewErrorResult(ERROR_CODE_RUNTIME, "运行时异常")
+	return NewErrorResult(ERROR_CODE_RUNTIME, ERROR_INFO_MAP[ERROR_CODE_RUNTIME])
 }
