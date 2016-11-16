@@ -150,7 +150,7 @@ func ListenAndServe(port int) {
 
 	app := ssss.NewApp(&cfg)
 
-	app.Register("GET|POST", "/e", &MainController{}, "Example", "p1, p2 string")
+	app.Register("GET|POST", "/e", &MainController{}, "Example(p1, p2 string)")
 	app.Register("GET|POST", "/e1", &MainController{}, "Example1")
 	app.Register("GET|POST", "/e2", &MainController{}, "Example2")
 	app.Register("GET|POST", "/e3", &MainController{}, "Example3")
@@ -209,7 +209,7 @@ func (this *MainController) Create(userform UserForm) {
 	this.RenderSucceed("json", user)
 }
 
-ssss.Register("GET|POST", "/user/create", &MainController{}, "Create", "user UserForm")
+ssss.Register("GET|POST", "/user/create", &MainController{}, "Create(userform UserForm)")
 
 
 
@@ -218,22 +218,22 @@ ssss.Register("GET|POST", "/user/create", &MainController{}, "Create", "user Use
 Http handler method parameter is base data type, support parameter tag.
 
 const (
-	accountTag = `account:"limit:20, require"`
-	pwdTag     = `pwd:"limit:10,require"`
-	nameTag    = `name:"limit:20"`
-	sexTag     = `sex:"scope:[1 2 3],default:1"`
-	ageTag     = `age:"scope:[0~200],default:18"`
-	emailTag   = `email:"limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"`
-	statureTag = `stature:"scope:[0.0~],default:0.0"`
+	accountTag = `account:"limit:20,require"`
+	pwdTag     = `pwd:"limit:20,require"`
 )
 
-func (this *MainController) Create(account, pwd, name string, sex int, age uint, email string, stature float32) {
-	//...
-	this.RenderSucceed("json", "ok")
+var LoginTags = []string{accountTag, pwdTag}
+
+func (this *MainController) Login(account, pwd string) {
+
+	fmt.Printf("account=%v\n", account)
+	fmt.Printf("pwd=%v\n", pwd)
+
+	this.RenderSucceed("json", "sessionid")
 }
 
 
-ssss.Register("GET|POST", "/user/create", &MainController{}, "Create", "account, pwd, name string, sex int, age uint, email string, stature float32", accountTag, pwdTag, nameTag, sexTag, ageTag, emailTag, statureTag)
+ssss.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
 
 
 ```

@@ -38,7 +38,7 @@ func NewControllerRegistor() *ControllerRegistor {
 //name - method on the container
 //params - parameter name list
 //tags parameter tag info
-func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, params string, tags []string, regex ...bool) {
+func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, params []string, tags []string, regex ...bool) {
 	if c == nil {
 		panic("controller is empty")
 	}
@@ -66,9 +66,9 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 
 	httpMethods := strings.Split(methods, "|")
 	routerinfo := &controllerInfo{methods: make([]int8, len(httpMethods)), all: false, name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type(), typ: mtype.Type, pnames: make([]string, 0)}
-	params = strings.TrimSpace(params)
-	if params != "" {
-		for _, p := range strings.Split(params, ",") {
+	//params = strings.TrimSpace(params)
+	if params != nil && len(params) > 0 { //params != "" {
+		for _, p := range params { //strings.Split(params, ",") {
 			routerinfo.pnames = append(routerinfo.pnames, strings.SplitN(strings.TrimSpace(p), " ", 2)[0])
 		}
 	}

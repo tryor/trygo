@@ -3,6 +3,7 @@ package ssss
 import (
 	"errors"
 	"strconv"
+	"strings"
 )
 
 func toInt64(v interface{}) int64 {
@@ -143,4 +144,18 @@ func toFloat64(v interface{}) float64 {
 	default:
 		panic(errors.New("unknown data type"))
 	}
+}
+
+//从方法中分离出方法名称和参数
+//Login(account, pwd string)
+func parseMethod(method string) (name string, params []string) {
+	pairs := strings.SplitN(method, "(", 2)
+	name = strings.TrimSpace(pairs[0])
+	if len(pairs) > 1 {
+		paramsstr := strings.TrimSpace(strings.Replace(pairs[1], ")", "", -1))
+		if len(paramsstr) > 0 {
+			params = strings.Split(paramsstr, ",")
+		}
+	}
+	return
 }

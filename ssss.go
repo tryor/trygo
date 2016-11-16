@@ -40,29 +40,20 @@ func NewApp(config *Config) *App {
 	return app
 }
 
-//method-http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
-//path-URL path
+//method - http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
+//path - URL path
 //name - method on the container
-func (app *App) Register(method string, path string, c IController, name string, params ...string) *App {
-	var ps string
-	var tags []string
-	if len(params) > 0 {
-		ps = params[0]    //params[0] 为参数定义，数量必须与实际参数一致
-		tags = params[1:] //为参数tag信息, 可参照结构Tag格式
-	}
-	app.Handlers.Add(method, path, c, name, ps, tags)
+//tags - function parameter tag info, see struct tag
+func (app *App) Register(method string, path string, c IController, name string, tags ...string) *App {
+	funcname, params := parseMethod(name)
+	app.Handlers.Add(method, path, c, funcname, params, tags)
 	return app
 }
 
 //采用正则路由
-func (app *App) RegisterPattern(method string, pattern string, c IController, name string, params ...string) *App {
-	var ps string
-	var tags []string
-	if len(params) > 0 {
-		ps = params[0]
-		tags = params[1:]
-	}
-	app.Handlers.Add(method, pattern, c, name, ps, tags, true)
+func (app *App) RegisterPattern(method string, pattern string, c IController, name string, tags ...string) *App {
+	funcname, params := parseMethod(name)
+	app.Handlers.Add(method, pattern, c, funcname, params, tags, true)
 	return app
 }
 
