@@ -413,7 +413,7 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 			vp.SetFloat(fval)
 		}
 	default:
-		return errors.New("the parameter type is not supported")
+		return errors.New(fmt.Sprintf("the parameter type is not supported, type is %v, value is %v", vp.Type(), val))
 	}
 
 	if len(val) > 0 && tagInfo != nil && tagInfo.Scope.Exist {
