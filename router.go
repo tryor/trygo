@@ -273,7 +273,7 @@ func (this *ControllerRegistor) parseParam(form url.Values, tags map[string]*tag
 	case reflect.Slice:
 		kind = ptype.Elem().Kind()
 		if reflect.Struct == kind {
-			return nil, errors.New("the parameter type is not supported")
+			return nil, errors.New("the parameter slice type is not supported")
 		} else {
 			vals := form[pname]
 			for _, str := range vals {
