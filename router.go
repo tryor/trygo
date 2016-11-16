@@ -108,9 +108,7 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 	//log.Debugf("ROUTER PATH [%v] METHOD [%v]", path, name)
 
 	//parse tags
-	if tags != nil {
-		routerinfo.tags = parseTags(methodParamTypes, tags, this.app.Config.FormDomainModel)
-	}
+	routerinfo.tags = parseTags(methodParamTypes, tags, this.app.Config.FormDomainModel)
 
 	if len(regex) == 0 || !regex[0] {
 		this.routermap[path] = routerinfo
