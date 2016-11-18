@@ -3,7 +3,6 @@ package ssss
 import (
 	"errors"
 	"fmt"
-	//"github.com/russross/blackfriday"
 	"html/template"
 	"os"
 	"path"
