@@ -11,8 +11,11 @@ type Config struct {
 
 	//是否打印Panic详细信息
 	PrintPanic bool
+	//指定一个处理Panic异常的函数，如果不指定，将采用默认方式处理
+	RecoverFunc func(*Context)
 
 	//响应错误信息方式， HTTP ERROR 或 格式化为json或xml, （默认:false）
+	//如果指定了RecoverFunc函数，此配置无效
 	ResponseFormatPanic bool
 
 	//RUNMODE_PROD，RUNMODE_DEV

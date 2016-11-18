@@ -14,6 +14,7 @@ type Context struct {
 	Request        *http.Request
 	Multipart      bool
 	Form           url.Values
+	config         *Config
 }
 
 func (ctx *Context) Abort(status int, body string) {

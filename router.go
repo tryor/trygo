@@ -15,7 +15,7 @@ import (
 
 type controllerInfo struct {
 	methods        []int8 //HTTP方法
-	all            bool
+	any            bool
 	controllerType reflect.Type
 	name           string              //函数名称
 	typ            reflect.Type        //函数类型
@@ -65,7 +65,7 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 	//	}
 
 	httpMethods := strings.Split(methods, "|")
-	routerinfo := &controllerInfo{methods: make([]int8, len(httpMethods)), all: false, name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type(), typ: mtype.Type, pnames: make([]string, 0)}
+	routerinfo := &controllerInfo{methods: make([]int8, len(httpMethods)), any: false, name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type(), typ: mtype.Type, pnames: make([]string, 0)}
 	//params = strings.TrimSpace(params)
 	if params != nil && len(params) > 0 { //params != "" {
 		for _, p := range params { //strings.Split(params, ",") {
@@ -98,7 +98,7 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 	for i, m := range httpMethods {
 		routerinfo.methods[i] = this.convMethod(strings.ToUpper(m))
 		if routerinfo.methods[i] == 0 {
-			routerinfo.all = true
+			routerinfo.any = true
 		}
 	}
 
@@ -122,58 +122,70 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 	}
 }
 
-// AutoRoute
-func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			var errtxt string
-			var code int
-			var errdata interface{}
-			if e, ok := err.(*Result); ok {
+func defaultRecoverFunc(ctx *Context) {
+	if err := recover(); err != nil {
+		var errtxt string
+		var code int
+		var errdata interface{}
+
+		switch err.(type) {
+		case *Result, Result:
+			if e, ok := err.(Result); ok {
 				errtxt = e.String()
-				code = http.StatusBadRequest
-				errdata = e
-				Logger.Error("%v", errtxt)
 			} else {
-				errtxt = "Internal Server Error"
-				code = http.StatusInternalServerError
-				errdata = err
-				Logger.Error("%v, %v", errtxt, err)
+				errtxt = fmt.Sprint(err)
+			}
+			code = http.StatusBadRequest
+			errdata = err
+			Logger.Error("%v", errtxt)
+		default:
+			errtxt = "Internal Server Error"
+			code = http.StatusInternalServerError
+			errdata = err
+			Logger.Error("%v, %v", errtxt, err)
 
-				if this.app.Config.PrintPanic {
-					for i := 1; ; i += 1 {
-						_, file, line, ok := runtime.Caller(i)
-						if !ok {
-							break
-						}
-						log.Print(file, line)
+			if ctx.config.PrintPanic {
+				for i := 1; ; i += 1 {
+					_, file, line, ok := runtime.Caller(i)
+					if !ok {
+						break
 					}
+					log.Print(file, line)
 				}
 			}
-
-			if this.app.Config.ResponseFormatPanic {
-				format, jsoncallback := r.FormValue("fmt"), r.FormValue("jsoncallback")
-				data, err := BuildError(errdata, format, jsoncallback)
-				if err != nil {
-					Logger.Error("%v", err)
-					http.Error(rw, errtxt, code)
-				} else {
-					RenderData(rw, format, data)
-				}
-			} else {
-				http.Error(rw, errtxt, code)
-			}
-
 		}
-	}()
+
+		if ctx.config.ResponseFormatPanic {
+			format, jsoncallback := ctx.Request.FormValue("fmt"), ctx.Request.FormValue("jsoncallback")
+			data, err := BuildError(errdata, format, jsoncallback)
+			if err != nil {
+				Logger.Error("%v", err)
+				http.Error(ctx.ResponseWriter, errtxt, code)
+			} else {
+				RenderData(ctx.ResponseWriter, format, data)
+			}
+		} else {
+			http.Error(ctx.ResponseWriter, errtxt, code)
+		}
+	}
+}
+
+func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	ctx := &Context{ResponseWriter: rw, Request: r, config: this.app.Config}
+
+	if this.app.Config.RecoverFunc != nil {
+		defer this.app.Config.RecoverFunc(ctx)
+	} else {
+		defer defaultRecoverFunc(ctx)
+	}
 
 	path := r.URL.Path
 
 	//http service route
 	router, ok := this.routermap[path]
 	if ok && router != nil {
-		if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
-			this.call(router, rw, r)
+		if router.any || this.hasMethod(router, this.convMethod(r.Method)) {
+			this.call(router, ctx)
 			return
 		}
 	}
@@ -183,8 +195,8 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 		if !regex.MatchString(path) {
 			continue
 		}
-		if router.all || this.hasMethod(router, this.convMethod(r.Method)) {
-			this.call(router, rw, r)
+		if router.any || this.hasMethod(router, this.convMethod(r.Method)) {
+			this.call(router, ctx)
 			return
 		}
 	}
@@ -206,65 +218,44 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-func (this *ControllerRegistor) call(router *controllerInfo, rw http.ResponseWriter, r *http.Request) {
+func (this *ControllerRegistor) call(router *controllerInfo, ctx *Context) {
 	vc := reflect.New(router.controllerType)
 
-	init := vc.MethodByName("Init")
-	in := make([]reflect.Value, 4)
-	ct := &Context{ResponseWriter: rw, Request: r}
-	in[0] = reflect.ValueOf(this.app)
-	in[1] = reflect.ValueOf(ct)
-	in[2] = reflect.ValueOf(router.controllerType.Name())
-	in[3] = reflect.ValueOf(router.name)
-	init.Call(in)
-
-	in0 := make([]reflect.Value, 0)
-	method := vc.MethodByName("Prepare")
-	if !method.Call(in0)[0].Interface().(bool) {
-		return
+	controller, ok := vc.Interface().(IController)
+	if !ok {
+		panic(router.controllerType.String() + " is not IController interface")
 	}
 
-	defer func() {
-		panicInfoField := vc.Elem().FieldByName("PanicInfo")
-		er := recover()
-		if er != nil {
-			panicInfoField.Set(reflect.ValueOf(er))
-		}
-		method = vc.MethodByName("Finish")
-		method.Call(in0)
-		if er != nil && !panicInfoField.IsNil() {
-			panic(er)
-		}
-	}()
+	controller.Init(this.app, ctx, router.controllerType.Name(), router.name)
 
-	method = vc.MethodByName(router.name)
+	form, err := controller.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+
+	controller.Prepare()
+	defer controller.Finish()
+
+	method := vc.MethodByName(router.name)
 	numIn := router.typ.NumIn()
 	inx := make([]reflect.Value, numIn-1)
 	if numIn > 1 {
-		parseForm := vc.MethodByName("ParseForm")
-		res := parseForm.Call(in0)
-		err := res[1].Interface()
-		if err != nil {
-			panic(err.(error))
-		}
-		form := res[0].Interface().(url.Values)
 		tags := router.tags
 		for i := 1; i < numIn; i++ {
 			idx := i - 1
 			pname := router.pnames[idx]
-			v, err := this.parseParam(form, tags, pname, router.typ.In(i))
+			v, err := this.parseMethodParam(form, tags, pname, router.typ.In(i))
 			if err != nil {
 				panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, fmt.Sprintf("%v=%v,cause:%v", pname, form[pname], err)))
 			} else {
-				inx[idx] = *v //reflect.ValueOf(v)
+				inx[idx] = *v
 			}
 		}
 	}
-
 	method.Call(inx)
 }
 
-func (this *ControllerRegistor) parseParam(form url.Values, tags map[string]*tagInfo, pname string, ptype reflect.Type) (*reflect.Value, error) {
+func (this *ControllerRegistor) parseMethodParam(form url.Values, tags map[string]*tagInfo, pname string, ptype reflect.Type) (*reflect.Value, error) {
 	vp := reflect.Indirect(reflect.New(ptype))
 	kind := ptype.Kind()
 	switch kind {
@@ -306,7 +297,7 @@ func (this *ControllerRegistor) parseParam(form url.Values, tags map[string]*tag
 				}
 
 			}
-			v, err := this.parseParam(form, tags, name, f.Type)
+			v, err := this.parseMethodParam(form, tags, name, f.Type)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("%v=%v, %v", name, form[name], err))
 			}
@@ -358,8 +349,7 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 		}
 
 		//check pattern
-		if tagInfo.Pattern.Exist && len(val) > 0 { //len(pattern) > 0 && len(val) > 0 {
-			//rs, err := tagInfo.Pattern.Regexp.MatchString(val) //regexp.MatchString(pattern, val)
+		if tagInfo.Pattern.Exist && len(val) > 0 {
 			if !tagInfo.Pattern.Regexp.MatchString(val) {
 				return errors.New(fmt.Sprintf("value is illegal, pattern match fail!, pattern:%v", tagInfo.Pattern.Regexp.String()))
 			}
@@ -370,7 +360,6 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 	case reflect.String:
 		vp.SetString(val)
 	case reflect.Bool:
-		//str := getValue(val, def)
 		if len(val) > 0 {
 			bval, err := strconv.ParseBool(val)
 			if err != nil {
@@ -379,7 +368,6 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 			vp.SetBool(bval)
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		//str := getValue(val, def)
 		if len(val) > 0 {
 			ival, err := strconv.ParseInt(val, 10, 0)
 			if err != nil {
@@ -388,7 +376,6 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 			vp.SetInt(ival)
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		//str := getValue(val, def)
 		if len(val) > 0 {
 			uval, err := strconv.ParseUint(val, 10, 0)
 			if err != nil {
@@ -397,7 +384,6 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 			vp.SetUint(uval)
 		}
 	case reflect.Float32:
-		//str := getValue(val, def)
 		if len(val) > 0 {
 			fval, err := strconv.ParseFloat(val, 32)
 			if err != nil {
@@ -406,7 +392,6 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 			vp.SetFloat(fval)
 		}
 	case reflect.Float64:
-		//str := getValue(val, def)
 		if len(val) > 0 {
 			fval, err := strconv.ParseFloat(val, 64)
 			if err != nil {
@@ -425,74 +410,6 @@ func (this *ControllerRegistor) parseValue(tagInfo *tagInfo, kind reflect.Kind, 
 	}
 
 	return nil
-}
-
-func checkScope(kind reflect.Kind, vp *reflect.Value, scope []string) error {
-
-	var ok = false
-	switch kind {
-	case reflect.String:
-		ok = stringArrayContains(vp.Interface().(string), scope)
-	case reflect.Bool:
-		ok = true
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		items, err := parseIntScope(scope)
-		if err != nil {
-			return err
-		}
-		v := vp.Int()
-		for _, item := range items {
-			if item.check(v) {
-				ok = true
-				break
-			}
-		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		items, err := parseUintScope(scope)
-		if err != nil {
-			return err
-		}
-		v := vp.Uint()
-		for _, item := range items {
-			if item.check(v) {
-				ok = true
-				break
-			}
-		}
-	case reflect.Float32, reflect.Float64:
-		items, err := parseFloatScope(scope)
-		if err != nil {
-			return err
-		}
-		v := vp.Float()
-		for _, item := range items {
-			if item.check(v) {
-				ok = true
-				break
-			}
-		}
-	}
-
-	if !ok {
-		return errors.New(fmt.Sprintf("value is illegal, scope:%v", scope))
-	}
-	return nil
-}
-
-func getValue(val string, def string) string {
-	if val == "" {
-		return def
-	}
-	return val
-}
-
-func stringArrayContains(needle string, haystack []string) bool {
-	for _, v := range haystack {
-		if needle == v {
-			return true
-		}
-	}
-	return false
 }
 
 func (this *ControllerRegistor) hasMethod(router *controllerInfo, method int8) bool {
@@ -523,6 +440,10 @@ func (this *ControllerRegistor) convMethod(m string) int8 {
 		return 6
 	case "OPTIONS":
 		return 7
+	case "TRACE":
+		return 8
+	case "CONNECT":
+		return 9
 	}
 	panic("(" + m + ") Method is not supported")
 }

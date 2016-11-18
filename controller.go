@@ -14,10 +14,16 @@ import (
 )
 
 type IController interface {
-	Init(app *App, ct *Context, cn string, mn string)
+	Init(app *App, ctx *Context, cn string, mn string)
 	//如果返回false, 将终止此请求
-	Prepare() bool
+	Prepare()
 	Finish()
+	//	//不希望继续抛出异常， 调用此方法清除
+	//	ClearPanic()
+	//    //get panic info
+	//    PanicInfo() interface()
+
+	ParseForm() (url.Values, error)
 }
 
 type Controller struct {
@@ -29,7 +35,7 @@ type Controller struct {
 	TplExt     string
 	App        *App
 	//panic抛出的异常，默认为nil, 如果不想继续抛出异常， 设置c.PanicInfo = nil
-	PanicInfo interface{}
+	//	PanicInfo interface{}
 }
 
 func (c *Controller) Init(app *App, ctx *Context, cn string, mn string) {
@@ -42,8 +48,11 @@ func (c *Controller) Init(app *App, ctx *Context, cn string, mn string) {
 	c.TplExt = "tpl"
 }
 
-func (c *Controller) Prepare() bool {
-	return true
+//func (c *Controller) Prepare() bool {
+//	return true
+//}
+func (c *Controller) Prepare() {
+
 }
 
 func (c *Controller) Finish() {
@@ -202,18 +211,18 @@ func (c *Controller) ParseForm() (url.Values, error) {
 
 func parseForm(c *Controller) (url.Values, error) {
 	contentType := c.Ctx.Request.Header.Get("Content-Type")
-	if strings.HasPrefix(contentType, "multipart/form-data") {
+	if strings.Contains(contentType, "multipart/form-data") {
 		err := c.Ctx.Request.ParseMultipartForm(defaultMaxMemory)
 		if err != nil {
 			return nil, err
 		}
+		c.Ctx.Multipart = true
 	} else {
 		err := c.Ctx.Request.ParseForm()
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	return c.Ctx.Request.Form, nil
 }
 

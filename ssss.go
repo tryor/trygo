@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
-	//	"strings"
 	"time"
 )
 
-const VERSION = "0.0.1"
+const VERSION = "0.1.0"
 
 var (
 	SSSSApp *App
@@ -56,6 +55,13 @@ func (app *App) RegisterPattern(method string, pattern string, c IController, na
 	app.Handlers.Add(method, pattern, c, funcname, params, tags, true)
 	return app
 }
+
+//app.RegisterFunc("GET|POST", "/user/login", func(ctx *ssss.Context))
+//func (app *App) RegisterFunc(method string, path string, handler func(ctx *ssss.Context)) *App {
+//	funcname, params := parseMethod(name)
+//	app.Handlers.Add(method, path, c, funcname, params, tags)
+//	return app
+//}
 
 func Register(method string, path string, c IController, name string, params ...string) *App {
 	SSSSApp.Register(method, path, c, name, params...)
