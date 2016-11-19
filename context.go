@@ -42,11 +42,6 @@ func (ctx *Context) Error(code int, message string) (err error) {
 }
 
 func (ctx *Context) ContentType(typ string) {
-	//	ext := typ
-	//	if !strings.HasPrefix(typ, ".") {
-	//		ext = "." + typ
-	//	}
-	//	ctype := mime.TypeByExtension(ext)
 	ctype := getContentType(typ)
 	if ctype != "" {
 		ctx.ResponseWriter.Header().Set("Content-Type", ctype)

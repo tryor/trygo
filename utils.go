@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+func isPattern(path string) bool {
+	return strings.ContainsAny(path, "^.()[]|*+?{}\\,<>:=!$")
+
+}
+
 func toInt64(v interface{}) int64 {
 	switch vi := v.(type) {
 	case int:

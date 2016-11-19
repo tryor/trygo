@@ -53,7 +53,6 @@ import (
 	"fmt"
 	"github.com/trygo/ssss"
 	"runtime"
-	//"trygo/ssss"
 )
 
 type MainController struct {
@@ -175,6 +174,11 @@ ssss.Register("*", "/admin/index", &AdminController{}, "Index")
 
 ssss.RegisterPattern("GET|POST", "/.*", &MainController{}, "Func5")
 ssss.RegisterPattern("GET|POST", "/admin/.*", &AdminController{}, "Index")
+
+app.Register("GET|POST", "/user/create", &MainController{}, "Create(userform CreateUserForm)")
+app.Register("GET|POST", "/user/edit", &MainController{}, "Edit(userform EditUserForm)")
+app.Register("GET|POST", "/user/query", &MainController{}, "Query(userform QueryUserForm)")
+app.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
 
 ```
 

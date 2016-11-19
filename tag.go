@@ -68,8 +68,8 @@ func parseTags(pnames map[string]reflect.Type, tags []string, formDomainModel bo
 
 func parseTag(pname string, ptype reflect.Type, tag string, formDomainModel bool, formatedTags map[string]*tagInfo) {
 	if ptype.Kind() == reflect.Struct {
-		stag := tag
 		for i := 0; i < ptype.NumField(); i++ {
+			stag := tag
 			f := ptype.Field(i)
 			var attrName string
 			if f.Anonymous {

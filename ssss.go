@@ -40,21 +40,20 @@ func NewApp(config *Config) *App {
 }
 
 //method - http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
-//path - URL path
+//pattern - URL path or regexp pattern
 //name - method on the container
 //tags - function parameter tag info, see struct tag
-func (app *App) Register(method string, path string, c IController, name string, tags ...string) *App {
+func (app *App) Register(method string, pattern string, c IController, name string, tags ...string) *App {
 	funcname, params := parseMethod(name)
-	app.Handlers.Add(method, path, c, funcname, params, tags)
+	app.Handlers.Add(method, pattern, c, funcname, params, tags)
 	return app
 }
 
-//采用正则路由
-func (app *App) RegisterPattern(method string, pattern string, c IController, name string, tags ...string) *App {
-	funcname, params := parseMethod(name)
-	app.Handlers.Add(method, pattern, c, funcname, params, tags, true)
-	return app
-}
+//func (app *App) RegisterPattern(method string, pattern string, c IController, name string, tags ...string) *App {
+//	funcname, params := parseMethod(name)
+//	app.Handlers.Add(method, pattern, c, funcname, params, tags, true)
+//	return app
+//}
 
 //app.RegisterFunc("GET|POST", "/user/login", func(ctx *ssss.Context))
 //func (app *App) RegisterFunc(method string, path string, handler func(ctx *ssss.Context)) *App {
@@ -68,10 +67,10 @@ func Register(method string, path string, c IController, name string, params ...
 	return SSSSApp
 }
 
-func RegisterPattern(method string, path string, c IController, name string, params ...string) *App {
-	SSSSApp.RegisterPattern(method, path, c, name, params...)
-	return SSSSApp
-}
+//func RegisterPattern(method string, path string, c IController, name string, params ...string) *App {
+//	SSSSApp.RegisterPattern(method, path, c, name, params...)
+//	return SSSSApp
+//}
 
 func (app *App) SetStaticPath(url string, path string) *App {
 	app.StaticDirs[url] = path

@@ -13,9 +13,24 @@ import (
 	"strings"
 )
 
+var (
+	HttpMethods = map[string]int8{
+		"*":       0,
+		"GET":     1,
+		"POST":    2,
+		"PUT":     3,
+		"DELETE":  4,
+		"PATCH":   5,
+		"OPTIONS": 6,
+		"HEAD":    7,
+		"TRACE":   8,
+		"CONNECT": 9,
+	}
+)
+
 type controllerInfo struct {
-	methods        []int8 //HTTP方法
-	any            bool
+	methods []int8 //HTTP方法
+	//any            bool
 	controllerType reflect.Type
 	name           string              //函数名称
 	typ            reflect.Type        //函数类型
@@ -38,7 +53,7 @@ func NewControllerRegistor() *ControllerRegistor {
 //name - method on the container
 //params - parameter name list
 //tags parameter tag info
-func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, params []string, tags []string, regex ...bool) {
+func (this *ControllerRegistor) Add(methods string, path string, c IController, name string, params []string, tags []string) {
 	if c == nil {
 		panic("controller is empty")
 	}
@@ -54,8 +69,6 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 		panic(fmt.Sprintf("ROUTER METHOD [%v] not find or invalid", name))
 	}
 
-	//fmt.Printf("%v, %v\n", m.Type().Name(), m.MapKeys())
-
 	//	检查参数类型
 	//	for i := 1; i < mtype.Type.NumIn(); i++ {
 	//		ptype := mtype.Type.In(i)
@@ -65,7 +78,7 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 	//	}
 
 	httpMethods := strings.Split(methods, "|")
-	routerinfo := &controllerInfo{methods: make([]int8, len(httpMethods)), any: false, name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type(), typ: mtype.Type, pnames: make([]string, 0)}
+	routerinfo := &controllerInfo{methods: make([]int8, 0, len(httpMethods)), name: name, controllerType: reflect.Indirect(reflect.ValueOf(c)).Type(), typ: mtype.Type, pnames: make([]string, 0)}
 	//params = strings.TrimSpace(params)
 	if params != nil && len(params) > 0 { //params != "" {
 		for _, p := range params { //strings.Split(params, ",") {
@@ -95,30 +108,34 @@ func (this *ControllerRegistor) Add(methods string, path string, c IController, 
 		}
 	}
 
-	for i, m := range httpMethods {
-		routerinfo.methods[i] = this.convMethod(strings.ToUpper(m))
-		if routerinfo.methods[i] == 0 {
-			routerinfo.any = true
+	for _, m := range httpMethods {
+		mv := this.convMethod(m)
+		if mv == 0 {
+			//routerinfo.any = true
+			for _, v := range HttpMethods {
+				routerinfo.methods = append(routerinfo.methods, v)
+			}
+		} else {
+			routerinfo.methods = append(routerinfo.methods, mv)
 		}
 	}
 
 	if len(routerinfo.methods) == 0 {
 		panic("methods is empty")
 	}
-	//log.Debugf("ROUTER PATH [%v] METHOD [%v]", path, name)
 
 	//parse tags
 	routerinfo.tags = parseTags(methodParamTypes, tags, this.app.Config.FormDomainModel)
 
-	if len(regex) == 0 || !regex[0] {
-		this.routermap[path] = routerinfo
-	} else {
+	if isPattern(path) {
 		//regex router
 		r, err := regexp.Compile(path)
 		if err != nil {
 			panic(err)
 		}
 		this.patternmap[r] = routerinfo
+	} else {
+		this.routermap[path] = routerinfo
 	}
 }
 
@@ -142,7 +159,7 @@ func defaultRecoverFunc(ctx *Context) {
 			errtxt = "Internal Server Error"
 			code = http.StatusInternalServerError
 			errdata = err
-			Logger.Error("%v, %v", errtxt, err)
+			Logger.Critical("%v, %v", errtxt, err)
 
 			if ctx.config.PrintPanic {
 				for i := 1; ; i += 1 {
@@ -180,23 +197,39 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	}
 
 	path := r.URL.Path
+	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
 
 	//http service route
 	router, ok := this.routermap[path]
-	if ok && router != nil {
-		if router.any || this.hasMethod(router, this.convMethod(r.Method)) {
-			this.call(router, ctx)
+	if ok { // && router != nil {
+		//if router.any || this.hasMethod(router, this.convMethod(r.Method)) {
+		if this.hasMethod(router, this.convMethod(r.Method)) {
+			this.call(router, ctx, nil)
 			return
 		}
 	}
 
 	//regex router
 	for regex, router := range this.patternmap {
-		if !regex.MatchString(path) {
+		items := regex.FindStringSubmatch(path)
+		if items == nil || len(items) == 0 {
 			continue
 		}
-		if router.any || this.hasMethod(router, this.convMethod(r.Method)) {
-			this.call(router, ctx)
+		restform := make(url.Values)
+		for i, name := range regex.SubexpNames() {
+			if i == 0 {
+				continue
+			}
+			if name == "" {
+				restform.Add("$"+strconv.Itoa(i), items[i])
+			} else {
+				restform.Add(name, items[i])
+			}
+		}
+
+		//if router.any || this.hasMethod(router, this.convMethod(r.Method)) {
+		if this.hasMethod(router, this.convMethod(r.Method)) {
+			this.call(router, ctx, restform)
 			return
 		}
 	}
@@ -218,7 +251,7 @@ func (this *ControllerRegistor) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-func (this *ControllerRegistor) call(router *controllerInfo, ctx *Context) {
+func (this *ControllerRegistor) call(router *controllerInfo, ctx *Context, restform url.Values) {
 	vc := reflect.New(router.controllerType)
 
 	controller, ok := vc.Interface().(IController)
@@ -231,6 +264,12 @@ func (this *ControllerRegistor) call(router *controllerInfo, ctx *Context) {
 	form, err := controller.ParseForm()
 	if err != nil {
 		panic(err)
+	}
+
+	if restform != nil {
+		for k, v := range restform {
+			form[k] = append(form[k], v...)
+		}
 	}
 
 	controller.Prepare()
@@ -295,7 +334,6 @@ func (this *ControllerRegistor) parseMethodParam(form url.Values, tags map[strin
 				if this.app.Config.FormDomainModel {
 					name = pname + "." + name
 				}
-
 			}
 			v, err := this.parseMethodParam(form, tags, name, f.Type)
 			if err != nil {
@@ -421,29 +459,11 @@ func (this *ControllerRegistor) hasMethod(router *controllerInfo, method int8) b
 	return false
 }
 
-//*,GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS => 0,1,2,3,4,5,6,7,8
+//*,GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,TRACE,CONNECT => 0,1,2,3,4,5,6,7,8,9
 func (this *ControllerRegistor) convMethod(m string) int8 {
-	switch m {
-	case "*":
-		return 0
-	case "GET":
-		return 1
-	case "POST":
-		return 2
-	case "PUT":
-		return 3
-	case "HEAD":
-		return 4
-	case "DELETE":
-		return 5
-	case "PATCH":
-		return 6
-	case "OPTIONS":
-		return 7
-	case "TRACE":
-		return 8
-	case "CONNECT":
-		return 9
+	mv, ok := HttpMethods[strings.ToUpper(m)]
+	if ok {
+		return mv
 	}
 	panic("(" + m + ") Method is not supported")
 }
