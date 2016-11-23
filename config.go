@@ -4,35 +4,94 @@ import (
 	"time"
 )
 
-type Config struct {
+type config struct {
 	HttpAddr string
 	HttpPort int
 	UseFcgi  bool
 
-	//是否打印Panic详细信息
-	PrintPanic bool
-	//指定一个处理Panic异常的函数，如果不指定，将采用默认方式处理
-	RecoverFunc func(*Context)
-
-	//响应错误信息方式， HTTP ERROR 或 格式化为json或xml, （默认:false）
-	//如果指定了RecoverFunc函数，此配置无效
-	ResponseFormatPanic bool
-
-	//RUNMODE_PROD，RUNMODE_DEV
+	//生产或开发模式，值：PROD, DEV
 	RunMode int8
 
 	//模板文件位置
 	TemplatePath string
 
-	//maximum duration before timing out read of the request, 默认:0(不超时)
+	//Maximum duration before timing out read of the request, 默认:0(不超时)
 	ReadTimeout time.Duration
-	//maximum duration before timing out write of the response, 默认:0(不超时)
+	//Maximum duration before timing out write of the response, 默认:0(不超时)
 	WriteTimeout time.Duration
 
 	//如果使用结构体来接收请求参数，可在此设置是否采用域模式传递参数, 默认:false
 	//如果值为true, 需要这样传递请求参数：user.account, user为方法参数名(为结构类型)，account为user结构字段名
 	FormDomainModel bool
+
+	//指示绑定请求参数时发生错误是否抛出异常, 默认:true
+	//如果设置为false, 当绑定数据出错时，将采用相应类型的默认值填充数据，并返回error
+	ThrowBindParamPanic bool
+
+	//指定一个处理Panic异常的函数，如果不指定，将采用默认方式处理
+	RecoverFunc func(*Context)
+	//是否打印Panic详细信息, 开发模式肯定会打印, @see defaultRecoverFunc
+	//如果是自定义RecoverFunc，PrintPanicDetail配置将无效
+	//默认:true
+	PrintPanicDetail bool
+
+	//是否自动从请求参数中解析响应数据格式
+	//如果被设置，将从请求参数中自动获取的FormatParamName参数以及JsoncallbackParamName参数值
+	//默认:false
+	AutoParseRenderFormat bool
+
+	//默认：fmt
+	FormatParamName string
+	//默认: jsoncallback
+	JsoncallbackParamName string
+
+	//默认是否使用Result结构对结果进行包装， @see result.go
+	//如果设置此参数，将默认设置Render.Wrap()
+	//当Render.Wrap()后，如果不设置响应数据格式，将默认为:json
+	//默认:false
+	RenderWrap bool
 }
 
-const RUNMODE_PROD int8 = 0
-const RUNMODE_DEV int8 = 1
+func newConfig() *config {
+	cfg := &config{}
+	cfg.HttpAddr = "0.0.0.0"
+	cfg.HttpPort = 7086
+	cfg.RunMode = PROD
+	cfg.TemplatePath = ""
+	cfg.ReadTimeout = 0
+	cfg.WriteTimeout = 0
+
+	cfg.FormDomainModel = false
+	cfg.ThrowBindParamPanic = true
+
+	cfg.RecoverFunc = defaultRecoverFunc
+	cfg.PrintPanicDetail = true
+	cfg.AutoParseRenderFormat = false
+	cfg.FormatParamName = "fmt"
+	cfg.JsoncallbackParamName = "jsoncb"
+	cfg.RenderWrap = false
+	return cfg
+}
+
+//type Bool int8
+
+//const (
+//	BOOL_TRUE    Bool = 1
+//	BOOL_FALSE   Bool = -1
+//	BOOL_UNKNOWN Bool = 0
+//)
+
+//生产或开发模式
+const (
+	PROD = iota
+	DEV
+)
+
+//响应数据格式
+const (
+	FORMAT_JSON = "json"
+	FORMAT_XML  = "xml"
+	FORMAT_TXT  = "txt"
+	FORMAT_HTML = "html"
+	// other ...
+)

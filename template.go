@@ -12,24 +12,24 @@ import (
 	"time"
 )
 
-type TemplateRegistor struct {
+type TemplateRegister struct {
 	tplFuncMap  template.FuncMap
 	Templates   map[string]*template.Template
 	TemplateExt []string
 }
 
-func NewTemplateRegistor() *TemplateRegistor {
-	tr := &TemplateRegistor{}
+func NewTemplateRegister() *TemplateRegister {
+	tr := &TemplateRegister{}
 	tr.Templates = make(map[string]*template.Template)
 	tr.tplFuncMap = make(template.FuncMap)
 	tr.TemplateExt = make([]string, 0)
 	tr.TemplateExt = append(tr.TemplateExt, "tpl", "html")
 	//tr.tplFuncMap["markdown"] = MarkDown
-	tr.tplFuncMap["dateformat"] = DateFormat
-	tr.tplFuncMap["date"] = Date
-	tr.tplFuncMap["compare"] = Compare
-	tr.tplFuncMap["substr"] = Substr
-	tr.tplFuncMap["html2str"] = Html2str
+	tr.tplFuncMap["dateformat"] = dateFormat
+	tr.tplFuncMap["date"] = date
+	tr.tplFuncMap["compare"] = compare
+	tr.tplFuncMap["substr"] = substr
+	tr.tplFuncMap["html2str"] = html2str
 	return tr
 }
 
@@ -40,7 +40,7 @@ func NewTemplateRegistor() *TemplateRegistor {
 //	return
 //}
 
-func Substr(s string, start, length int) string {
+func substr(s string, start, length int) string {
 	bt := []rune(s)
 	if start < 0 {
 		start = 0
@@ -54,7 +54,7 @@ func Substr(s string, start, length int) string {
 	return string(bt[start:end])
 }
 
-func Html2str(html string) string {
+func html2str(html string) string {
 	src := string(html)
 
 	//将HTML标签全转换成小写
@@ -80,12 +80,12 @@ func Html2str(html string) string {
 	return strings.TrimSpace(src)
 }
 
-func DateFormat(t time.Time, layout string) (datestring string) {
+func dateFormat(t time.Time, layout string) (datestring string) {
 	datestring = t.Format(layout)
 	return
 }
 
-func Date(t time.Time, format string) (datestring string) {
+func date(t time.Time, format string) (datestring string) {
 	patterns := []string{
 		// year
 		"Y", "2006", // A full numeric representation of a year, 4 digits	Examples: 1999 or 2003
@@ -125,7 +125,7 @@ func Date(t time.Time, format string) (datestring string) {
 
 // Compare is a quick and dirty comparison function. It will convert whatever you give it to strings and see if the two values are equal.
 // Whitespace is trimmed. Used by the template parser as "eq"
-func Compare(a, b interface{}) (equal bool) {
+func compare(a, b interface{}) (equal bool) {
 	equal = false
 	if strings.TrimSpace(fmt.Sprintf("%v", a)) == strings.TrimSpace(fmt.Sprintf("%v", b)) {
 		equal = true
@@ -134,7 +134,7 @@ func Compare(a, b interface{}) (equal bool) {
 }
 
 // AddFuncMap let user to register a func in the template
-func (this *TemplateRegistor) AddFuncMap(key string, funname interface{}) error {
+func (this *TemplateRegister) AddFuncMap(key string, funname interface{}) error {
 	if _, ok := this.tplFuncMap[key]; ok {
 		return errors.New("funcmap already has the key")
 	}
@@ -147,7 +147,7 @@ type templatefile struct {
 	files map[string][]string
 }
 
-func (self *templatefile) visit(tr *TemplateRegistor, paths string, f os.FileInfo, err error) error {
+func (self *templatefile) visit(tr *TemplateRegister, paths string, f os.FileInfo, err error) error {
 	if f == nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (self *templatefile) visit(tr *TemplateRegistor, paths string, f os.FileInf
 	return nil
 }
 
-func (this *TemplateRegistor) AddTemplateExt(ext string) {
+func (this *TemplateRegister) AddTemplateExt(ext string) {
 	for _, v := range this.TemplateExt {
 		if v == ext {
 			return
@@ -190,12 +190,12 @@ func (this *TemplateRegistor) AddTemplateExt(ext string) {
 	this.TemplateExt = append(this.TemplateExt, ext)
 }
 
-func (this *TemplateRegistor) buildTemplate(dir string) error {
+func (this *TemplateRegister) buildTemplate(dir string) error {
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			return err
 		} else {
-			return errors.New("dir open err")
+			return errors.New("dir open error")
 		}
 	}
 	self := templatefile{
@@ -206,7 +206,7 @@ func (this *TemplateRegistor) buildTemplate(dir string) error {
 		return self.visit(this, path, f, err)
 	})
 	if err != nil {
-		fmt.Printf("filepath.Walk() returned %v\n", err)
+		Logger.Error("filepath.Walk() returned %v", err)
 		return err
 	}
 	for k, v := range self.files {

@@ -1,144 +1,105 @@
 package ssss
 
 import (
-	"fmt"
-	"log"
-	"net"
 	"net/http"
-	"net/http/fcgi"
 	"os"
-	"time"
+	"strconv"
+	"strings"
 )
 
 const VERSION = "0.1.0"
 
 var (
-	SSSSApp *App
-	AppPath string
+	DefaultApp *App
+	AppPath    string
 )
 
 func init() {
-	SSSSApp = NewApp(nil)
+	DefaultApp = NewApp()
 	AppPath, _ = os.Getwd()
 }
 
-type App struct {
-	Handlers         *ControllerRegistor
-	Config           *Config
-	StaticDirs       map[string]string
-	TemplateRegistor *TemplateRegistor
-}
-
-func NewApp(config *Config) *App {
-	cr := NewControllerRegistor()
-	app := &App{Handlers: cr,
-		Config:           config,
-		StaticDirs:       make(map[string]string),
-		TemplateRegistor: NewTemplateRegistor()}
-	cr.app = app
-	return app
-}
-
-//method - http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
-//pattern - URL path or regexp pattern
-//name - method on the container
-//tags - function parameter tag info, see struct tag
-func (app *App) Register(method string, pattern string, c IController, name string, tags ...string) *App {
-	funcname, params := parseMethod(name)
-	app.Handlers.Add(method, pattern, c, funcname, params, tags)
-	return app
-}
-
-//func (app *App) RegisterPattern(method string, pattern string, c IController, name string, tags ...string) *App {
-//	funcname, params := parseMethod(name)
-//	app.Handlers.Add(method, pattern, c, funcname, params, tags, true)
-//	return app
-//}
-
-//app.RegisterFunc("GET|POST", "/user/login", func(ctx *ssss.Context))
-//func (app *App) RegisterFunc(method string, path string, handler func(ctx *ssss.Context)) *App {
-//	funcname, params := parseMethod(name)
-//	app.Handlers.Add(method, path, c, funcname, params, tags)
-//	return app
-//}
-
 func Register(method string, path string, c IController, name string, params ...string) *App {
-	SSSSApp.Register(method, path, c, name, params...)
-	return SSSSApp
+	DefaultApp.Register(method, path, c, name, params...)
+	return DefaultApp
 }
 
-//func RegisterPattern(method string, path string, c IController, name string, params ...string) *App {
-//	SSSSApp.RegisterPattern(method, path, c, name, params...)
-//	return SSSSApp
-//}
+func RegisterHandler(pattern string, h http.Handler) *App {
+	DefaultApp.RegisterHandler(pattern, h)
+	return DefaultApp
+}
 
-func (app *App) SetStaticPath(url string, path string) *App {
-	app.StaticDirs[url] = path
-	return app
+func RegisterFunc(methods, pattern string, f HandlerFunc) *App {
+	DefaultApp.RegisterFunc(methods, pattern, f)
+	return DefaultApp
+}
+
+func Get(pattern string, f HandlerFunc) *App {
+	DefaultApp.Get(pattern, f)
+	return DefaultApp
+}
+
+func Post(pattern string, f HandlerFunc) *App {
+	DefaultApp.Post(pattern, f)
+	return DefaultApp
+}
+
+func Put(pattern string, f HandlerFunc) *App {
+	DefaultApp.Put(pattern, f)
+	return DefaultApp
+}
+
+func Delete(pattern string, f HandlerFunc) *App {
+	DefaultApp.Delete(pattern, f)
+	return DefaultApp
+}
+
+func Head(pattern string, f HandlerFunc) *App {
+	DefaultApp.Head(pattern, f)
+	return DefaultApp
+}
+
+func Patch(pattern string, f HandlerFunc) *App {
+	DefaultApp.Patch(pattern, f)
+	return DefaultApp
+}
+
+func Options(pattern string, f HandlerFunc) *App {
+	DefaultApp.Handlers.Options(pattern, f)
+	return DefaultApp
+}
+
+func Any(pattern string, f HandlerFunc) *App {
+	DefaultApp.Any(pattern, f)
+	return DefaultApp
 }
 
 func SetStaticPath(url string, path string) *App {
-	SSSSApp.StaticDirs[url] = path
-	return SSSSApp
+	DefaultApp.StaticDirs[url] = path
+	return DefaultApp
 }
 
 func AddTemplateExt(ext string) {
-	SSSSApp.TemplateRegistor.AddTemplateExt(ext)
+	DefaultApp.TemplateRegister.AddTemplateExt(ext)
 }
 
-func AddFuncMap(key string, funname interface{}) error {
-	return SSSSApp.TemplateRegistor.AddFuncMap(key, funname)
+func AddTemplateFunc(key string, funname interface{}) error {
+	return DefaultApp.TemplateRegister.AddFuncMap(key, funname)
 }
 
-func (app *App) buildTemplate() {
-	if app.Config.TemplatePath != "" {
-		app.TemplateRegistor.buildTemplate(app.Config.TemplatePath)
-	}
-}
-
-func (app *App) Run() {
-	app.buildTemplate()
-	if app.Config.HttpAddr == "" {
-		app.Config.HttpAddr = "0.0.0.0"
-	}
-
-	//if app.config.FormatParamName == "" {
-	//	app.config.FormatParamName = "_fmt"
-	//}
-
-	addr := fmt.Sprintf("%s:%d", app.Config.HttpAddr, app.Config.HttpPort)
-	var err error
-
-	for {
-		if app.Config.UseFcgi {
-			l, e := net.Listen("tcp", addr)
-			if e != nil {
-				log.Print("Listen: ", e)
-			}
-			//log.Print("UseFcgi, fcgi.Serve")
-			err = fcgi.Serve(l, app.Handlers)
+func Run(listen ...string) {
+	if len(listen) == 0 {
+		var err error
+		pair := strings.SplitN(listen[0], ":", 2)
+		if len(pair) > 1 {
+			DefaultApp.Config.HttpAddr = pair[0]
+			DefaultApp.Config.HttpPort, err = strconv.Atoi(pair[1])
 		} else {
-			//log.Print("http.ListenAndServe")
-			//err = http.ListenAndServe(addr, app.Handlers)
-			err = httpListenAndServe(addr, app.Handlers, app.Config.ReadTimeout, app.Config.WriteTimeout)
+			DefaultApp.Config.HttpPort, err = strconv.Atoi(pair[0])
 		}
 		if err != nil {
-			log.Print("ListenAndServe: ", err)
-			//panic(err)
+			panic(err)
 		}
-		time.Sleep(time.Second * 2)
 	}
-}
-
-func httpListenAndServe(addr string, handler http.Handler, readTimeout time.Duration, writeTimeout time.Duration) error {
-	//if readTimeout == 0 {
-	//	readTimeout = time.Second * 5
-	//}
-	server := &http.Server{Addr: addr, Handler: handler, ReadTimeout: readTimeout, WriteTimeout: writeTimeout}
-	return server.ListenAndServe()
-}
-
-func Run(config *Config) {
-	SSSSApp.Config = config
-	SSSSApp.Run()
+	DefaultApp.Run()
 }

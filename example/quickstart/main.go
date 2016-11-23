@@ -11,21 +11,18 @@ type MainController struct {
 }
 
 func (this *MainController) Hello() {
-	this.RenderText("hello world")
+	this.Render("hello world")
 }
 
-func (this *MainController) Hi() {
-	this.RenderHtml("<html><body>Hi</body></html>")
+func (this *MainController) Hi(name string) {
+	this.Render("<html><body>Hi, Mr " + name + "</body></html>").Html()
 }
 
 func main() {
 	ssss.Register("GET|POST", "/", &MainController{}, "Hello")
-	ssss.Register("GET|POST", "/hi", &MainController{}, "Hi")
+	ssss.Register("GET|POST", "/hi/(?P<name>[^/]+)$", &MainController{}, "Hi(name string)")
 
-	var cfg ssss.Config
-	cfg.HttpPort = 8080
-
-	fmt.Println("HTTP ListenAndServe AT ", cfg.HttpPort)
-	ssss.Run(&cfg)
+	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultConfig.HttpPort)
+	ssss.Run()
 
 }
