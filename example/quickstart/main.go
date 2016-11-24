@@ -22,7 +22,7 @@ func main() {
 	ssss.Register("GET|POST", "/", &MainController{}, "Hello")
 	ssss.Register("GET|POST", "/hi/(?P<name>[^/]+)$", &MainController{}, "Hi(name string)")
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultConfig.HttpPort)
+	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.HttpPort)
 	ssss.Run()
 
 }

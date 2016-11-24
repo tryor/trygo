@@ -88,7 +88,7 @@ func AddTemplateFunc(key string, funname interface{}) error {
 }
 
 func Run(listen ...string) {
-	if len(listen) == 0 {
+	if len(listen) > 0 {
 		var err error
 		pair := strings.SplitN(listen[0], ":", 2)
 		if len(pair) > 1 {
