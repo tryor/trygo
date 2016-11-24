@@ -53,6 +53,24 @@ func joinMsgs(args ...interface{}) string {
 	return strings.Join(strs, ", ")
 }
 
+func isErrorResult(err interface{}) bool {
+	switch e := err.(type) {
+	case *Result:
+		return e.Code != ERROR_CODE_OK
+	case Result:
+		return e.Code != ERROR_CODE_OK
+	}
+	return false
+}
+
+func isResult(err interface{}) bool {
+	switch err.(type) {
+	case *Result, Result:
+		return true
+	}
+	return false
+}
+
 func convertErrorResult(err interface{}) *Result {
 	switch e := err.(type) {
 	case *Result:

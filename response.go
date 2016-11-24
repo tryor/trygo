@@ -167,7 +167,7 @@ func (this *render) Data(data interface{}) *render {
 		if bs, ok := data.([]byte); ok {
 			this.data = bs
 		} else {
-			if this.code >= 400 {
+			if this.code >= 400 || isErrorResult(data) {
 				if this.jsoncallback == "" {
 					this.data, this.err = BuildError(data, this.wrap, this.format)
 				} else {

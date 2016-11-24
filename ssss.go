@@ -29,6 +29,11 @@ func RegisterHandler(pattern string, h http.Handler) *App {
 	return DefaultApp
 }
 
+func RegisterRESTful(pattern string, c IController) *App {
+	DefaultApp.RegisterRESTful(pattern, c)
+	return DefaultApp
+}
+
 func RegisterFunc(methods, pattern string, f HandlerFunc) *App {
 	DefaultApp.RegisterFunc(methods, pattern, f)
 	return DefaultApp

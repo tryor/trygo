@@ -391,7 +391,7 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	}
 
 	//http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
-	err := Render(ctx, "Method Not Allowed").
+	err := Render(ctx, "Method Not Allowed").Text().
 		Code(http.StatusMethodNotAllowed).
 		Exec()
 	if err != nil {
@@ -455,8 +455,8 @@ func defaultRecoverFunc(ctx *Context) {
 		}
 
 		err := Render(ctx, errdata).Code(code).
-			Format(ctx.Request.FormValue(ctx.App.Config.FormatParamName)).
-			JsonCallback(ctx.Request.FormValue(ctx.App.Config.JsoncallbackParamName)).
+			//			Format(ctx.Request.FormValue(ctx.App.Config.FormatParamName)).
+			//			JsonCallback(ctx.Request.FormValue(ctx.App.Config.JsoncallbackParamName)).
 			Exec()
 
 		if err != nil {
