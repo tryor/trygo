@@ -24,18 +24,48 @@ type Context struct {
 	Error error
 }
 
-func NewContext(rw http.ResponseWriter, r *http.Request, app *App) *Context {
-	ctx := &Context{ResponseWriter: &Response{ResponseWriter: rw}, Request: r, App: app}
-	if resp, ok := rw.(*Response); ok {
-		ctx.ResponseWriter = resp
-	} else {
-		ctx.ResponseWriter = &Response{ResponseWriter: rw}
-	}
-	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
+func newContext() *Context {
+	ctx := &Context{ResponseWriter: &Response{}}
+	//	if resp, ok := rw.(*Response); ok {
+	//		ctx.ResponseWriter = resp
+	//	} else {
+	//		ctx.ResponseWriter = &Response{ResponseWriter: rw}
+	//	}
+	//ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
 	ctx.ResponseWriter.Ctx = ctx
 	ctx.ResponseWriter.render = &render{rw: ctx.ResponseWriter}
 	ctx.Input = newInput(ctx)
+	return ctx
+}
 
+func NewContext(rw http.ResponseWriter, r *http.Request, app *App) *Context {
+	ctx := newContext()
+	ctx.Reset(rw, r, app)
+
+	//	ctx := &Context{Request: r, App: app}
+	//	if resp, ok := rw.(*Response); ok {
+	//		ctx.ResponseWriter = resp
+	//	} else {
+	//		ctx.ResponseWriter = &Response{ResponseWriter: rw}
+	//	}
+	//	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
+	//	ctx.ResponseWriter.Ctx = ctx
+	//	ctx.ResponseWriter.render = &render{rw: ctx.ResponseWriter}
+	//	ctx.Input = newInput(ctx)
+
+	return ctx
+}
+
+func (ctx *Context) Reset(rw http.ResponseWriter, r *http.Request, app *App) *Context {
+	if resp, ok := rw.(*Response); ok {
+		ctx.ResponseWriter = resp
+	} else {
+		ctx.ResponseWriter.ResponseWriter = rw
+	}
+	ctx.Request = r
+	ctx.App = app
+	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
+	ctx.Input.Values = nil
 	return ctx
 }
 
@@ -58,7 +88,7 @@ type input struct {
 
 func newInput(ctx *Context) *input {
 	inpt := &input{ctx: ctx}
-	if ctx.Request.Form != nil {
+	if ctx.Request != nil && ctx.Request.Form != nil {
 		inpt.Values = ctx.Request.Form
 	}
 	return inpt
@@ -136,7 +166,7 @@ func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) err
 	if err != nil {
 		input.ctx.Error = err
 		if input.ctx.App.Config.ThrowBindParamPanic {
-			if input.ctx.App.Config.RenderWrap {
+			if input.ctx.App.Config.Render.Wrap {
 				panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, fmt.Sprintf("%v=%v,cause:%v", key, input.ctx.Input.Values[key], err)))
 			}
 			panic(err)

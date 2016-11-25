@@ -6,9 +6,11 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"path"
+	"reflect"
 	"strconv"
 )
 
@@ -61,11 +63,14 @@ type render struct {
 	contentType  string
 	jsoncallback string
 	//layout       bool
-	wrap bool
-	gzip bool //暂时未实现
+	wrap     bool
+	wrapCode int //包装的消息code
+	noWrap   bool
+	gzip     bool //暂时未实现
 
 	//数据
-	code int
+	status int //http status
+
 	data []byte
 	err  error
 
@@ -76,11 +81,11 @@ type render struct {
 }
 
 func (this *render) String() string {
-	return fmt.Sprintf("Render: started:%v, format:%s, contentType:%s, jsoncallback:%s, wrap:%v, code:%d, len(data):%d, error:%v", this.started, this.format, this.contentType, this.jsoncallback, this.wrap, this.code, len(this.data), this.err)
+	return fmt.Sprintf("Render: started:%v, format:%s, contentType:%s, jsoncallback:%s, wrap:%v, status:%d, len(data):%d, error:%v", this.started, this.format, this.contentType, this.jsoncallback, this.wrap, this.status, len(this.data), this.err)
 }
 
-func (this *render) Code(c int) *render {
-	this.code = c
+func (this *render) Status(c int) *render {
+	this.status = c
 	return this
 }
 
@@ -95,8 +100,21 @@ func (this *render) Format(format string) *render {
 	return this
 }
 
-func (this *render) Wrap() *render {
+func (this *render) Wrap(code ...int) *render {
 	this.wrap = true
+	if len(code) > 0 {
+		this.wrapCode = code[0]
+	}
+	return this
+}
+
+func (this *render) Nowrap(b ...bool) *render {
+	this.noWrap = true
+	return this
+}
+
+func (this *render) Gzip() *render {
+	this.gzip = true
 	return this
 }
 
@@ -120,10 +138,10 @@ func (this *render) Json() *render {
 
 func (this *render) JsonCallback(jsoncallback string) *render {
 	if jsoncallback != "" {
-		if this.format == "" {
-			this.Json()
-		}
 		this.jsoncallback = jsoncallback
+	}
+	if this.format == "" {
+		this.Json()
 	}
 	return this
 }
@@ -161,36 +179,27 @@ func (this *render) Data(data interface{}) *render {
 	this.prepareDataFunc = func() {
 
 		if this.wrap && this.format == "" {
+			//如果设置了wrap, 将默认为json格式
 			this.Json()
 		}
 
-		if bs, ok := data.([]byte); ok {
-			this.data = bs
-		} else {
-			if this.code >= 400 || isErrorResult(data) {
-				if this.jsoncallback == "" {
-					this.data, this.err = BuildError(data, this.wrap, this.format)
-				} else {
-					this.data, this.err = BuildError(data, this.wrap, this.format, this.jsoncallback)
-				}
+		if this.status >= 400 || isErrorResult(data) || this.wrapCode != ERROR_CODE_OK {
+			if this.jsoncallback == "" {
+				this.data, this.err = BuildError(data, this.wrap, this.wrapCode, this.format)
 			} else {
-				if this.jsoncallback == "" {
-					this.data, this.err = BuildSucceed(data, this.wrap, this.format)
-				} else {
-					this.data, this.err = BuildSucceed(data, this.wrap, this.format, this.jsoncallback)
-				}
+				this.data, this.err = BuildError(data, this.wrap, this.wrapCode, this.format, this.jsoncallback)
 			}
-
-			if this.err != nil {
-				Logger.Error("error:%v, data:%v", this.err, data)
+		} else {
+			if this.jsoncallback == "" {
+				this.data, this.err = BuildSucceed(data, this.wrap, this.format)
+			} else {
+				this.data, this.err = BuildSucceed(data, this.wrap, this.format, this.jsoncallback)
 			}
 		}
 
-		//		if this.contentType == "" {
-		//			if _, ok := data.(string); ok {
-		//				this.Text()
-		//			}
-		//		}
+		if this.err != nil {
+			Logger.Error("error:%v, data:%v", this.err, data)
+		}
 
 	}
 	return this
@@ -203,9 +212,10 @@ func (this *render) Reset() {
 	this.jsoncallback = ""
 	this.prepareDataFunc = nil
 	this.err = nil
-	this.code = 0
+	this.status = 0
 	this.started = false
-	this.wrap = this.rw.Ctx.App.Config.RenderWrap
+	this.wrap = this.rw.Ctx.App.Config.Render.Wrap
+	this.noWrap = false
 }
 
 func (this *render) Exec() error {
@@ -217,16 +227,22 @@ func (this *render) Exec() error {
 
 	cfg := this.rw.Ctx.App.Config
 
-	if !this.wrap && cfg.RenderWrap {
-		this.wrap = cfg.RenderWrap
+	if this.noWrap {
+		if this.wrap {
+			this.wrap = false
+		}
+	} else {
+		if !this.wrap && cfg.Render.Wrap {
+			this.wrap = cfg.Render.Wrap
+		}
 	}
 
-	if cfg.AutoParseRenderFormat && this.format == "" {
-		this.format = this.rw.Ctx.Request.FormValue(cfg.FormatParamName)
+	if cfg.Render.AutoParseFormat && this.format == "" {
+		this.format = this.rw.Ctx.Input.GetValue(cfg.Render.FormatParamName)
 	}
 
-	if cfg.AutoParseRenderFormat && this.jsoncallback == "" {
-		this.jsoncallback = this.rw.Ctx.Request.FormValue(cfg.JsoncallbackParamName)
+	if cfg.Render.AutoParseFormat && this.jsoncallback == "" {
+		this.jsoncallback = this.rw.Ctx.Input.GetValue(cfg.Render.JsoncallbackParamName)
 	}
 
 	if this.prepareDataFunc != nil {
@@ -241,10 +257,21 @@ func (this *render) Exec() error {
 	}
 
 	if this.err != nil {
-		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, this.format, this.jsoncallback)
+		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
 	}
 
-	return renderData(this.rw, this.contentType, this.data, this.code)
+	var encoding string
+	var buf = &bytes.Buffer{}
+	if cfg.Render.Gzip || this.gzip {
+		encoding = ParseEncoding(this.rw.Ctx.Request)
+	}
+
+	if b, n, _ := WriteBody(encoding, buf, this.data); b {
+		this.rw.SetHeader("Content-Encoding", n)
+	} else {
+		this.rw.SetHeader("Content-Length", strconv.Itoa(len(this.data)))
+	}
+	return renderBuffer(this.rw, this.contentType, buf, this.status)
 }
 
 func Render(ctx *Context, data ...interface{}) *render {
@@ -267,58 +294,6 @@ func Render(ctx *Context, data ...interface{}) *render {
 func RenderTemplate(ctx *Context, templateName string, data map[interface{}]interface{}) *render {
 	return Render(ctx).Template(templateName, data)
 }
-
-//func RenderHtml(rw http.ResponseWriter, content string) (err error) {
-//	return Render(rw, "html", []byte(content))
-//}
-
-//func RenderText(rw http.ResponseWriter, content string) (err error) {
-//	return Render(rw, "txt", []byte(content))
-//}
-
-//func RenderJson(rw http.ResponseWriter, data interface{}) (err error) {
-//	content, err := buildJson(data)
-//	if err != nil {
-//		http.Error(rw, err.Error(), http.StatusInternalServerError)
-//		Logger.Error("error:%v, data:%v", err, data)
-//		return err
-//	}
-//	return Render(rw, "application/json", content)
-//}
-
-//func RenderJQueryCallback(rw http.ResponseWriter, jsoncallback string, data interface{}) error {
-//	bjson, err := buildJQueryCallback(jsoncallback, data)
-//	if err != nil {
-//		http.Error(rw, err.Error(), http.StatusInternalServerError)
-//		Logger.Error("error:%v, data:%v", err, data)
-//		return err
-//	}
-//	return Render(rw, "application/json", bjson)
-//}
-
-//func RenderXml(rw http.ResponseWriter, data interface{}) error {
-//	content, err := buildXml(data)
-//	if err != nil {
-//		http.Error(rw, err.Error(), http.StatusInternalServerError)
-//		Logger.Error("error:%v, data:%v", err, data)
-//		return err
-//	}
-//	return Render(rw, "xml", content)
-//}
-
-//func RenderTemplate(rw http.ResponseWriter, app *App, tplnames string, data map[interface{}]interface{}, contentType ...string) (err error) {
-//	content, err := buildTemplateData(app, tplnames, data)
-//	if err != nil {
-//		http.Error(rw, err.Error(), http.StatusInternalServerError)
-//		Logger.Error("template execute error:%v, tplnames:%s", err, tplnames)
-//		return err
-//	}
-//	if len(contentType) > 0 {
-//		return Render(rw, contentType[0], content)
-//	} else {
-//		return Render(rw, "html", content)
-//	}
-//}
 
 func BuildTemplateData(app *App, tplnames string, data map[interface{}]interface{}) ([]byte, error) {
 
@@ -347,7 +322,7 @@ func BuildTemplateData(app *App, tplnames string, data map[interface{}]interface
 
 //fmtAndJsoncallback[0] - format, 值指示响应结果格式，当前支持:json或xml, 默认为:json
 //fmtAndJsoncallback[1] - jsoncallback 如果是json格式结果，支持jsoncallback
-func renderError(rw http.ResponseWriter, errdata interface{}, code int, wrap bool, fmtAndJsoncallback ...string) error {
+func renderError(rw http.ResponseWriter, errdata interface{}, status int, wrap bool, wrapcode int, fmtAndJsoncallback ...string) error {
 	var format, jsoncallback string
 	if len(fmtAndJsoncallback) > 0 {
 		format = fmtAndJsoncallback[0]
@@ -358,9 +333,9 @@ func renderError(rw http.ResponseWriter, errdata interface{}, code int, wrap boo
 	var content []byte
 	var err error
 	if jsoncallback == "" {
-		content, err = BuildError(errdata, wrap, format)
+		content, err = BuildError(errdata, wrap, wrapcode, format)
 	} else {
-		content, err = BuildError(errdata, wrap, format, jsoncallback)
+		content, err = BuildError(errdata, wrap, wrapcode, format, jsoncallback)
 	}
 
 	if err != nil {
@@ -368,7 +343,7 @@ func renderError(rw http.ResponseWriter, errdata interface{}, code int, wrap boo
 		Logger.Error("format:%v, error:%v, data:%v", format, err, errdata)
 		return err
 	}
-	return renderData(rw, toContentType(format), content, code)
+	return renderData(rw, toContentType(format), content, status)
 }
 
 //fmtAndJsoncallback[0] - fmt, 值指示响应结果格式，当前支持:json或xml, 默认为:json
@@ -395,19 +370,28 @@ func renderSucceed(rw http.ResponseWriter, data interface{}, wrap bool, fmtAndJs
 	return renderData(rw, toContentType(format), content)
 }
 
-//func renderData(rw http.ResponseWriter, format string, data []byte, code ...int) error {
-//	return Render(rw, toContentType(format), data, code...)
-//}
+func renderBuffer(rw http.ResponseWriter, contentType string, buff *bytes.Buffer, status ...int) error {
+	rw.Header().Set("Content-Type", getContentType(contentType))
+	if len(status) > 0 && status[0] != 0 {
+		rw.WriteHeader(status[0])
+	}
+	_, err := io.Copy(rw, buff)
+	if err != nil {
+		Logger.Error("error:%v, buff.length:%v", err, buff.Len())
+		return err
+	}
+	return nil
+}
 
-func renderData(rw http.ResponseWriter, contentType string, data []byte, code ...int) error {
+func renderData(rw http.ResponseWriter, contentType string, data []byte, status ...int) error {
 	rw.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	rw.Header().Set("Content-Type", getContentType(contentType))
-	if len(code) > 0 && code[0] != 0 {
-		rw.WriteHeader(code[0])
+	if len(status) > 0 && status[0] != 0 {
+		rw.WriteHeader(status[0])
 	}
 	_, err := rw.Write(data)
 	if err != nil {
-		Logger.Error("error:%v, data:%v", err, data)
+		Logger.Error("error:%v, data.length:%v", err, len(data))
 		return err
 	}
 	return nil
@@ -455,10 +439,22 @@ func buildXmlSucceed(data interface{}, wrap bool) ([]byte, error) {
 	return buildXml(data)
 }
 
+type root struct {
+	Data interface{} `xml:"data"`
+}
+
 func buildXml(data interface{}) ([]byte, error) {
-	if s, ok := data.(string); ok {
-		return []byte(s), nil
+	switch reflect.TypeOf(data).Kind() {
+	case reflect.String:
+		return []byte(data.(string)), nil
+	case reflect.Slice:
+		if content, ok := data.([]byte); ok {
+			return content, nil
+		}
+		//如果是reflect.Slice类型，需要将其放到一个根节点中
+		data = root{Data: data}
 	}
+
 	content, err := xml.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -468,18 +464,9 @@ func buildXml(data interface{}) ([]byte, error) {
 
 func buildJson(data interface{}) ([]byte, error) {
 	switch jdata := data.(type) {
-	case string:
-		content := bytes.NewBuffer(make([]byte, 0, len(jdata)))
-		content.WriteByte('"')
-		content.WriteString(jdata)
-		content.WriteByte('"')
-		return content.Bytes(), nil
 	case []byte:
-		content := bytes.NewBuffer(make([]byte, 0, len(jdata)))
-		content.WriteByte('"')
-		content.Write(jdata)
-		content.WriteByte('"')
-		return content.Bytes(), nil
+		//如果是[]byte类型，就认为已经是标准json格式数据
+		return jdata, nil
 	default:
 		jsondata, err := json.Marshal(data)
 		if err != nil {
@@ -495,14 +482,9 @@ func buildJQueryCallback(jsoncallback string, data interface{}) ([]byte, error) 
 	content.WriteString(jsoncallback)
 	content.WriteByte('(')
 	switch data.(type) {
-	case string:
-		content.WriteByte('"')
-		content.WriteString(data.(string))
-		content.WriteByte('"')
 	case []byte:
-		content.WriteByte('"')
+		//如果是[]byte类型，就认为已经是标准json格式数据
 		content.Write(data.([]byte))
-		content.WriteByte('"')
 	default:
 		jsondata, err := json.Marshal(data)
 		if err != nil {
@@ -517,20 +499,20 @@ func buildJQueryCallback(jsoncallback string, data interface{}) ([]byte, error) 
 
 //format 结果格式, 值有：json, xml, 其它(txt, html, ...)
 //jsoncallback 当需要将json结果做为js函数参数时，在jsoncallback中指定函数名
-func BuildError(err interface{}, wrap bool, format string, jsoncallback ...string) ([]byte, error) {
+func BuildError(err interface{}, wrap bool, code int, format string, jsoncallback ...string) ([]byte, error) {
 	switch format {
 	case "json":
-		return buildJsonError(err, wrap, jsoncallback...)
+		return buildJsonError(err, wrap, code, jsoncallback...)
 	case "xml":
-		return buildXmlError(err, wrap)
+		return buildXmlError(err, wrap, code)
 	default:
 		return buildData(err), nil
 	}
 }
 
-func buildJsonError(err interface{}, wrap bool, jsoncallback ...string) ([]byte, error) {
+func buildJsonError(err interface{}, wrap bool, code int, jsoncallback ...string) ([]byte, error) {
 	if wrap {
-		err = convertErrorResult(err)
+		err = convertErrorResult(err, code)
 	}
 	if len(jsoncallback) > 0 && jsoncallback[0] != "" {
 		return buildJQueryCallback(jsoncallback[0], err)
@@ -539,9 +521,9 @@ func buildJsonError(err interface{}, wrap bool, jsoncallback ...string) ([]byte,
 	}
 }
 
-func buildXmlError(err interface{}, wrap bool) ([]byte, error) {
+func buildXmlError(err interface{}, wrap bool, code int) ([]byte, error) {
 	if wrap {
-		err = convertErrorResult(err)
+		err = convertErrorResult(err, code)
 	}
 	return buildXml(err)
 }

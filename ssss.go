@@ -80,7 +80,12 @@ func Any(pattern string, f HandlerFunc) *App {
 }
 
 func SetStaticPath(url string, path string) *App {
-	DefaultApp.StaticDirs[url] = path
+	DefaultApp.SetStaticPath(url, path)
+	return DefaultApp
+}
+
+func SetViewsPath(path string) *App {
+	DefaultApp.SetViewsPath(path)
 	return DefaultApp
 }
 

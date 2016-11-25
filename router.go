@@ -1,6 +1,7 @@
 package ssss
 
 import (
+	"sync"
 	//	"errors"
 	"fmt"
 	"net/http"
@@ -142,10 +143,18 @@ type ControllerRegister struct {
 	routermap  map[string]*controllerInfo
 	patternmap map[*regexp.Regexp]*controllerInfo
 	app        *App
+	pool       sync.Pool
 }
 
 func NewControllerRegister() *ControllerRegister {
-	return &ControllerRegister{routermap: make(map[string]*controllerInfo), patternmap: make(map[*regexp.Regexp]*controllerInfo)}
+	cr := &ControllerRegister{
+		routermap:  make(map[string]*controllerInfo),
+		patternmap: make(map[*regexp.Regexp]*controllerInfo),
+	}
+	cr.pool.New = func() interface{} {
+		return newContext()
+	}
+	return cr
 }
 
 //method - http method, GET,POST,PUT,HEAD,DELETE,PATCH,OPTIONS,*
@@ -157,9 +166,6 @@ func (this *ControllerRegister) Add(methods string, pattern string, c IControlle
 	if c == nil {
 		panic("http: controller is empty")
 	}
-	//	if name == "" {
-	//		panic("http: method name on the container is empty")
-	//	}
 
 	var methodType reflect.Type
 	controller := reflect.ValueOf(c)
@@ -172,13 +178,6 @@ func (this *ControllerRegister) Add(methods string, pattern string, c IControlle
 		}
 		methodType = controllerTypeMethod.Type
 	}
-	//	检查参数类型
-	//	for i := 1; i < mtype.Type.NumIn(); i++ {
-	//		ptype := mtype.Type.In(i)
-	//		if (ptype.Kind() != reflect.String && ptype.Kind() != reflect.Slice) || (ptype.Kind() == reflect.Slice && ptype.Elem().Kind() != reflect.String) {
-	//			panic(fmt.Sprintf("the parameter type is not string, %v", ptype))
-	//		}
-	//	}
 
 	routerinfo := &defaultRouter{app: this.app, funcName: name, controllerType: reflect.Indirect(controller).Type(), funcType: methodType, funcParamNames: make([]string, 0)}
 
@@ -333,7 +332,10 @@ func convMethod(m string) int8 {
 
 func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
-	ctx := NewContext(rw, r, this.app)
+	ctx := this.pool.Get().(*Context)
+	ctx.Reset(rw, r, this.app)
+	defer this.pool.Put(ctx)
+	//ctx := NewContext(rw, r, this.app)
 
 	if this.app.Config.RecoverFunc != nil {
 		defer this.app.Config.RecoverFunc(ctx)
@@ -392,7 +394,7 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 
 	//http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
 	err := Render(ctx, "Method Not Allowed").Text().
-		Code(http.StatusMethodNotAllowed).
+		Status(http.StatusMethodNotAllowed).
 		Exec()
 	if err != nil {
 		Logger.Critical("%v", err)
@@ -426,13 +428,15 @@ func defaultRecoverFunc(ctx *Context) {
 		var code int
 		var errdata interface{}
 
-		switch err.(type) {
-		case *Result, Result:
-			if e, ok := err.(Result); ok {
-				errtxt = e.String()
-			} else {
-				errtxt = fmt.Sprint(err)
-			}
+		switch e := err.(type) {
+		case *Result:
+			errtxt = e.String()
+			code = http.StatusBadRequest
+			errdata = err
+			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
+			Logger.Info("%v", errtxt)
+		case Result:
+			errtxt = e.String()
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
@@ -454,9 +458,7 @@ func defaultRecoverFunc(ctx *Context) {
 			}
 		}
 
-		err := Render(ctx, errdata).Code(code).
-			//			Format(ctx.Request.FormValue(ctx.App.Config.FormatParamName)).
-			//			JsonCallback(ctx.Request.FormValue(ctx.App.Config.JsoncallbackParamName)).
+		err := Render(ctx, errdata).Status(code).
 			Exec()
 
 		if err != nil {

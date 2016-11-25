@@ -35,10 +35,15 @@ type config struct {
 	//默认:true
 	PrintPanicDetail bool
 
+	Render renderConfig
+}
+
+type renderConfig struct {
+
 	//是否自动从请求参数中解析响应数据格式
 	//如果被设置，将从请求参数中自动获取的FormatParamName参数以及JsoncallbackParamName参数值
 	//默认:false
-	AutoParseRenderFormat bool
+	AutoParseFormat bool
 
 	//默认：fmt
 	FormatParamName string
@@ -49,7 +54,11 @@ type config struct {
 	//如果设置此参数，将默认设置Render.Wrap()
 	//当Render.Wrap()后，如果不设置响应数据格式，将默认为:json
 	//默认:false
-	RenderWrap bool
+	Wrap bool
+
+	//默认是否对响应数据进行gzip压缩
+	//默认:false
+	Gzip bool
 }
 
 func newConfig() *config {
@@ -66,20 +75,14 @@ func newConfig() *config {
 
 	cfg.RecoverFunc = defaultRecoverFunc
 	cfg.PrintPanicDetail = true
-	cfg.AutoParseRenderFormat = false
-	cfg.FormatParamName = "fmt"
-	cfg.JsoncallbackParamName = "jsoncb"
-	cfg.RenderWrap = false
+
+	cfg.Render.AutoParseFormat = false
+	cfg.Render.FormatParamName = "fmt"
+	cfg.Render.JsoncallbackParamName = "jsoncb"
+	cfg.Render.Wrap = false
+	cfg.Render.Gzip = false
 	return cfg
 }
-
-//type Bool int8
-
-//const (
-//	BOOL_TRUE    Bool = 1
-//	BOOL_FALSE   Bool = -1
-//	BOOL_UNKNOWN Bool = 0
-//)
 
 //生产或开发模式
 const (

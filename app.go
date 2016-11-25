@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -97,13 +98,27 @@ func (app *App) Any(pattern string, f HandlerFunc) *App {
 }
 
 func (app *App) SetStaticPath(url string, path string) *App {
-	app.StaticDirs[url] = path
+	if !strings.HasPrefix(url, "/") {
+		url = "/" + url
+	}
+	if url != "/" {
+		url = strings.TrimRight(url, "/")
+	}
+	DefaultApp.StaticDirs[url] = path
+	return DefaultApp
+}
+
+func (app *App) SetViewsPath(path string) *App {
+	app.Config.TemplatePath = path
 	return app
 }
 
 func (app *App) buildTemplate() {
 	if app.Config.TemplatePath != "" {
-		app.TemplateRegister.buildTemplate(app.Config.TemplatePath)
+		err := app.TemplateRegister.buildTemplate(app.Config.TemplatePath)
+		if err != nil {
+			Logger.Error("%v", err)
+		}
 	}
 }
 
