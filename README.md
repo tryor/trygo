@@ -237,7 +237,7 @@ type renderConfig struct {
 
 	//默认：fmt
 	FormatParamName string
-	//默认: jsoncallback
+	//默认: jsoncb
 	JsoncallbackParamName string
 
 	//默认是否使用Result结构对结果进行包装， @see result.go
