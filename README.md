@@ -39,7 +39,9 @@ func main() {
 ```
 A better understanding of the SSSS example:
 ```go
-@see https://github.com/trygo/ssss/tree/master/examples
+
+@see https://github.com/trygo/ssss/tree/master/examples(https://github.com/trygo/ssss/tree/master/examples)
+
 ```
 
 ## Router
