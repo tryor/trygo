@@ -104,8 +104,8 @@ func (app *App) SetStaticPath(url string, path string) *App {
 	if url != "/" {
 		url = strings.TrimRight(url, "/")
 	}
-	DefaultApp.StaticDirs[url] = path
-	return DefaultApp
+	app.StaticDirs[url] = path
+	return app
 }
 
 func (app *App) SetViewsPath(path string) *App {
