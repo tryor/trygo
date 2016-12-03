@@ -38,13 +38,37 @@ func main() {
 }
 ```
 A better understanding of the SSSS example:
-```go
-@see examples
-```
+
+
+@see (https://github.com/trygo/ssss/tree/master/examples)
+
 
 ## Router
 ============
 ```go
+
+ssss.Register(method string, path string, c IController, name string, params ...string)
+ssss.RegisterHandler(pattern string, h http.Handler)
+ssss.RegisterRESTful(pattern string, c IController)
+ssss.RegisterFunc(methods, pattern string, f HandlerFunc)
+ssss.Get(pattern string, f HandlerFunc)
+ssss.Post(pattern string, f HandlerFunc) 
+ssss.Put(pattern string, f HandlerFunc)
+ ...
+ 
+ 
+ 
+for example： 
+
+ssss.Get("/", func(ctx *Context) {
+	ctx.Render("hello world")
+})
+
+ssss.RegisterHandler("^/admin/(?P<token>[^/]+)/?$", &AdminHandler{})
+ssss.RegisterHandler("/admin/?$", &AdminHandler{})
+ssss.RegisterRESTful("/orders", &OrdersController{})
+
+
 ssss.Register("GET", "/f1", &MainController{}, "Func1")
 ssss.Register("POST", "/f2", &MainController{}, "Func2")
 ssss.Register("GET|POST", "/f3", &MainController{}, "Func3")
@@ -52,13 +76,16 @@ ssss.Register("PUT", "/f4", &MainController{}, "Func4")
 ssss.Register("GET|POST", "/admin/login", &AdminController{}, "Login")
 ssss.Register("*", "/admin/index", &AdminController{}, "Index")
 
-ssss.RegisterPattern("GET|POST", "/.*", &MainController{}, "Func5")
-ssss.RegisterPattern("GET|POST", "/admin/.*", &AdminController{}, "Index")
+ssss.Register("GET|POST", "/.*", &MainController{}, "Func5")
+ssss.Register("GET|POST", "/admin/.*", &AdminController{}, "Index")
 
 app.Register("GET|POST", "/user/create", &MainController{}, "Create(userform CreateUserForm)")
 app.Register("GET|POST", "/user/edit", &MainController{}, "Edit(userform EditUserForm)")
 app.Register("GET|POST", "/user/query", &MainController{}, "Query(userform QueryUserForm)")
 app.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
+
+
+
 
 ```
 
@@ -90,7 +117,7 @@ func (this *MainController) Create(userform UserForm) {
 	//...
 	user := service.UserService.Create(userform)
 	//...
-	this.RenderSucceed("json", user)
+	this.Render(user)
 }
 
 ssss.Register("GET|POST", "/user/create", &MainController{}, "Create(userform UserForm)")
@@ -102,8 +129,8 @@ ssss.Register("GET|POST", "/user/create", &MainController{}, "Create(userform Us
 Http handler method parameter is base data type, support parameter tag.
 
 const (
-	accountTag = `account:"limit:20,require"`
-	pwdTag     = `pwd:"limit:20,require"`
+	accountTag = `field:"account,limit:20,require"`
+	pwdTag     = `field:"pwd,limit:20,require"`
 )
 
 var LoginTags = []string{accountTag, pwdTag}
@@ -113,7 +140,7 @@ func (this *MainController) Login(account, pwd string) {
 	fmt.Printf("account=%v\n", account)
 	fmt.Printf("pwd=%v\n", pwd)
 
-	this.RenderSucceed("json", "sessionid")
+	this.Render("sessionid")
 }
 
 
@@ -166,35 +193,102 @@ c.RenderTemplate()
 ## Config
 ============
 ```go
-type Config struct {
+
+type config struct {
 	HttpAddr string
 	HttpPort int
 	UseFcgi  bool
-	
-	//是否打印Panic详细信息
-	PrintPanic bool
-	
-	//响应错误信息方式， HTTP ERROR 或 格式化为json或xml, （默认:false）
-	ResponseFormatPanic bool
-	
-	//RUNMODE_PROD，RUNMODE_DEV
-	RunMode             int8 
-	
+
+	//生产或开发模式，值：PROD, DEV
+	RunMode int8
+
 	//模板文件位置
 	TemplatePath string
-	
-	//maximum duration before timing out read of the request, 默认:0(不超时)
-	ReadTimeout  time.Duration 
-	//maximum duration before timing out write of the response, 默认:0(不超时)
-	WriteTimeout time.Duration 
+
+	//Maximum duration before timing out read of the request, 默认:0(不超时)
+	ReadTimeout time.Duration
+	//Maximum duration before timing out write of the response, 默认:0(不超时)
+	WriteTimeout time.Duration
 
 	//如果使用结构体来接收请求参数，可在此设置是否采用域模式传递参数, 默认:false
 	//如果值为true, 需要这样传递请求参数：user.account, user为方法参数名(为结构类型)，account为user结构字段名
 	FormDomainModel bool
+
+	//指示绑定请求参数时发生错误是否抛出异常, 默认:true
+	//如果设置为false, 当绑定数据出错时，将采用相应类型的默认值填充数据，并返回error
+	ThrowBindParamPanic bool
+
+	//指定一个处理Panic异常的函数，如果不指定，将采用默认方式处理
+	RecoverFunc func(*Context)
+	//是否打印Panic详细信息, 开发模式肯定会打印, @see defaultRecoverFunc
+	//如果是自定义RecoverFunc，PrintPanicDetail配置将无效
+	//默认:true
+	PrintPanicDetail bool
+
+	Render renderConfig
 }
 
-const RUNMODE_PROD int8 = 0
-const RUNMODE_DEV int8 = 1
+type renderConfig struct {
+
+	//是否自动从请求参数中解析响应数据格式
+	//如果被设置，将从请求参数中自动获取的FormatParamName参数以及JsoncallbackParamName参数值
+	//默认:false
+	AutoParseFormat bool
+
+	//默认：fmt
+	FormatParamName string
+	//默认: jsoncb
+	JsoncallbackParamName string
+
+	//默认是否使用Result结构对结果进行包装， @see result.go
+	//如果设置此参数，将默认设置Render.Wrap()
+	//当Render.Wrap()后，如果不设置响应数据格式，将默认为:json
+	//默认:false
+	Wrap bool
+
+	//默认是否对响应数据进行gzip压缩
+	//默认:false
+	Gzip bool
+}
+
+func newConfig() *config {
+	cfg := &config{}
+	cfg.HttpAddr = "0.0.0.0"
+	cfg.HttpPort = 7086
+	cfg.RunMode = PROD
+	cfg.TemplatePath = ""
+	cfg.ReadTimeout = 0
+	cfg.WriteTimeout = 0
+
+	cfg.FormDomainModel = false
+	cfg.ThrowBindParamPanic = true
+
+	cfg.RecoverFunc = defaultRecoverFunc
+	cfg.PrintPanicDetail = true
+
+	cfg.Render.AutoParseFormat = false
+	cfg.Render.FormatParamName = "fmt"
+	cfg.Render.JsoncallbackParamName = "jsoncb"
+	cfg.Render.Wrap = false
+	cfg.Render.Gzip = false
+	return cfg
+}
+
+//生产或开发模式
+const (
+	PROD = iota
+	DEV
+)
+
+//数据渲染格式
+const (
+	FORMAT_JSON = "json"
+	FORMAT_XML  = "xml"
+	FORMAT_TXT  = "txt"
+	FORMAT_HTML = "html"
+	// other ...
+)
+
 ```
 
 ## Thank End
