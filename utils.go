@@ -18,6 +18,23 @@ const (
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
 
+//func fileStringSize(f *os.File) string {
+//	stat, err := data.Stat()
+//	return strconv.FormatInt(stat.Size(), 10)
+//}
+
+//				if err != nil {
+//					this.err = err
+//				} else {
+//					stat, err := data.Stat()
+//					if err != nil {
+//						this.rw.SetHeader("Content-Length", strconv.FormatInt(stat.Size(), 10))
+//					} else {
+//						this.err = err
+//					}
+//				}
+//			}
+
 func parseForm(r *http.Request, multipart bool) (url.Values, error) {
 	if multipart {
 		err := r.ParseMultipartForm(defaultMaxMemory)
@@ -314,7 +331,13 @@ func getContentType(typ string) string {
 	if !strings.HasPrefix(typ, ".") {
 		ext = "." + typ
 	}
-	ct := mime.TypeByExtension(ext)
+
+	ct := mimemaps[ext]
+	if ct != "" {
+		return ct
+	}
+
+	ct = mime.TypeByExtension(ext)
 	if ct == "" {
 		return typ
 	}

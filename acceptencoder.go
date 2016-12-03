@@ -132,32 +132,53 @@ var (
 )
 
 // WriteFile reads from file and writes to writer by the specific encoding(gzip/deflate)
-func WriteFile(encoding string, writer io.Writer, file *os.File) (bool, string, error) {
-	return writeLevel(encoding, writer, file, flate.BestCompression)
+func WriteFile(encoding string, writer io.Writer, file *os.File, beforeWritingFunc ...func(enable bool, name string)) (bool, string, error) {
+	stat, err := file.Stat()
+	if err != nil {
+		return false, "", err
+	}
+	size := stat.Size()
+	if encoding == "" || size < int64(gzipMinLength) {
+		if len(beforeWritingFunc) > 0 {
+			beforeWritingFunc[0](false, "")
+		}
+		_, err = io.Copy(writer, file)
+		return false, "", err
+	}
+	return writeLevel(encoding, writer, file, flate.BestCompression, beforeWritingFunc...)
 }
 
 // WriteBody reads  writes content to writer by the specific encoding(gzip/deflate)
-func WriteBody(encoding string, writer io.Writer, content []byte) (bool, string, error) {
+func WriteBody(encoding string, writer io.Writer, content []byte, beforeWritingFunc ...func(enable bool, name string)) (bool, string, error) {
 	if encoding == "" || len(content) < gzipMinLength {
+		if len(beforeWritingFunc) > 0 {
+			beforeWritingFunc[0](false, "")
+		}
 		_, err := writer.Write(content)
 		return false, "", err
 	}
-	return writeLevel(encoding, writer, bytes.NewReader(content), gzipCompressLevel)
+	return writeLevel(encoding, writer, bytes.NewReader(content), gzipCompressLevel, beforeWritingFunc...)
 }
 
 // writeLevel reads from reader,writes to writer by specific encoding and compress level
 // the compress level is defined by deflate package
-func writeLevel(encoding string, writer io.Writer, reader io.Reader, level int) (bool, string, error) {
+func writeLevel(encoding string, writer io.Writer, reader io.Reader, level int, beforeWritingFunc ...func(enable bool, name string)) (bool, string, error) {
 	var outputWriter resetWriter
 	var err error
 	var ce = noneCompressEncoder
+	var encodeEnable bool
 
 	if cf, ok := encoderMap[encoding]; ok {
 		ce = cf
+		encodeEnable = true
 	}
 	encoding = ce.name
 	outputWriter = ce.encode(writer, level)
 	defer ce.put(outputWriter, level)
+
+	if len(beforeWritingFunc) > 0 {
+		beforeWritingFunc[0](encodeEnable, encoding)
+	}
 
 	_, err = io.Copy(outputWriter, reader)
 	if err != nil {

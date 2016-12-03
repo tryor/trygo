@@ -9,15 +9,24 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"reflect"
 	"strconv"
+	"strings"
+	"sync/atomic"
 )
 
 type Response struct {
 	http.ResponseWriter
 	Ctx    *Context
 	render *render
+}
+
+func newResponse(ctx *Context) *Response {
+	r := &Response{Ctx: ctx}
+	r.render = &render{rw: r}
+	return r
 }
 
 func (this *Response) Error(code int, message string) (err error) {
@@ -35,12 +44,20 @@ func (this *Response) ContentType(typ string) {
 	}
 }
 
-func (this *Response) AddHeader(hdr string, val string) {
-	this.ResponseWriter.Header().Add(hdr, val)
+func (this *Response) AddHeader(hdr string, val interface{}) {
+	if v, ok := val.(string); ok {
+		this.ResponseWriter.Header().Add(hdr, v)
+	} else {
+		this.ResponseWriter.Header().Add(hdr, fmt.Sprint(val))
+	}
 }
 
-func (this *Response) SetHeader(hdr string, val string) {
-	this.ResponseWriter.Header().Set(hdr, val)
+func (this *Response) SetHeader(hdr string, val interface{}) {
+	if v, ok := val.(string); ok {
+		this.ResponseWriter.Header().Set(hdr, v)
+	} else {
+		this.ResponseWriter.Header().Set(hdr, fmt.Sprint(val))
+	}
 }
 
 func (this *Response) Flush() {
@@ -71,17 +88,36 @@ type render struct {
 	//数据
 	status int //http status
 
-	data []byte
+	data interface{}
 	err  error
 
 	prepareDataFunc func()
 
 	//标记是否已经开始
 	started bool
+
+	//标记是否已经被取消渲染
+	canceled int32
 }
 
 func (this *render) String() string {
-	return fmt.Sprintf("Render: started:%v, format:%s, contentType:%s, jsoncallback:%s, wrap:%v, status:%d, len(data):%d, error:%v", this.started, this.format, this.contentType, this.jsoncallback, this.wrap, this.status, len(this.data), this.err)
+	length := -1
+	if d, ok := this.data.([]byte); ok {
+		length = len(d)
+	}
+	return fmt.Sprintf("Render: started:%v, format:%s, contentType:%s, jsoncallback:%s, wrap:%v, status:%d, len(data):%d, error:%v", this.started, this.format, this.contentType, this.jsoncallback, this.wrap, this.status, length, this.err)
+}
+
+func (this *render) Cancel() {
+	atomic.StoreInt32(&this.canceled, 1)
+}
+
+func (this *render) IsCanceled(clear ...bool) bool {
+	if len(clear) > 0 && clear[0] {
+		return atomic.SwapInt32(&this.canceled, 0) > 0
+	} else {
+		return atomic.LoadInt32(&this.canceled) > 0
+	}
 }
 
 func (this *render) Status(c int) *render {
@@ -152,6 +188,40 @@ func (this *render) Xml() *render {
 	return this
 }
 
+func (this *render) Header(key string, value ...string) *render {
+	if len(value) == 0 {
+		this.rw.SetHeader(key, "")
+		return this
+	}
+	if len(value) == 1 {
+		this.rw.SetHeader(key, value[0])
+		return this
+	}
+	for _, v := range value {
+		this.rw.AddHeader(key, v)
+	}
+	return this
+}
+
+func (this *render) File(filename string) *render {
+	if this.prepareDataFunc != nil {
+		this.Reset()
+		panic("Render: data already exists")
+	}
+	this.prepareDataFunc = func() {
+		if this.contentType == "" {
+			if idx := strings.LastIndex(filename, "."); idx != -1 {
+				this.contentType = filename[idx:]
+			}
+		}
+		this.data, this.err = os.Open(filename)
+		if this.err != nil {
+			Logger.Error("open file error:%v, filename:%s", this.err, filename)
+		}
+	}
+	return this
+}
+
 func (this *render) Template(templateName string, data map[interface{}]interface{}) *render {
 	if this.prepareDataFunc != nil {
 		this.Reset()
@@ -214,8 +284,11 @@ func (this *render) Reset() {
 	this.err = nil
 	this.status = 0
 	this.started = false
-	this.wrap = this.rw.Ctx.App.Config.Render.Wrap
+	this.wrap = false //this.rw.Ctx.App.Config.Render.Wrap
 	this.noWrap = false
+	this.wrapCode = 0
+	this.gzip = false
+	//this.canceled = 0 //this.IsCanceled(true)
 }
 
 func (this *render) Exec() error {
@@ -223,6 +296,10 @@ func (this *render) Exec() error {
 
 	if !this.started {
 		return errors.New("the render is not started")
+	}
+
+	if this.IsCanceled(true) {
+		return nil
 	}
 
 	cfg := this.rw.Ctx.App.Config
@@ -245,6 +322,9 @@ func (this *render) Exec() error {
 		this.jsoncallback = this.rw.Ctx.Input.GetValue(cfg.Render.JsoncallbackParamName)
 	}
 
+	//Logger.Debug("this.format:%v", this.format)
+	//Logger.Debug("this.wrap:%v", this.wrap)
+
 	if this.prepareDataFunc != nil {
 		this.prepareDataFunc()
 	}
@@ -261,17 +341,50 @@ func (this *render) Exec() error {
 	}
 
 	var encoding string
-	var buf = &bytes.Buffer{}
 	if cfg.Render.Gzip || this.gzip {
 		encoding = ParseEncoding(this.rw.Ctx.Request)
 	}
 
-	if b, n, _ := WriteBody(encoding, buf, this.data); b {
-		this.rw.SetHeader("Content-Encoding", n)
-	} else {
-		this.rw.SetHeader("Content-Length", strconv.Itoa(len(this.data)))
+	this.rw.Header().Set("Content-Type", getContentType(this.contentType))
+	switch data := this.data.(type) {
+	case []byte:
+		if _, _, err := WriteBody(encoding, this.rw, data, func(encodingEnable bool, name string) {
+			if encodingEnable {
+				this.rw.SetHeader("Content-Encoding", name)
+			} else {
+				this.rw.SetHeader("Content-Length", strconv.Itoa(len(data)))
+			}
+		}); err != nil {
+			Logger.Warn("write data error, %v", err)
+			//this.err = err
+		}
+	case *os.File:
+		defer data.Close()
+		if _, _, err := WriteFile(encoding, this.rw, data, func(encodingEnable bool, name string) {
+			if encodingEnable {
+				this.rw.SetHeader("Content-Encoding", name)
+			} else {
+				stat, err := data.Stat()
+				if err != nil {
+					Logger.Error("stat file size error, %v", err)
+					this.err = err
+				} else {
+					this.rw.SetHeader("Content-Length", strconv.FormatInt(stat.Size(), 10))
+				}
+			}
+		}); err != nil {
+			Logger.Warn("write file error, %v", err)
+			//this.err = err
+		}
+	default:
+		this.err = errors.New("data type not supported")
+		Logger.Error("%v", this.err)
 	}
-	return renderBuffer(this.rw, this.contentType, buf, this.status)
+
+	if this.err != nil && !this.IsCanceled(true) {
+		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+	}
+	return this.err
 }
 
 func Render(ctx *Context, data ...interface{}) *render {
@@ -289,6 +402,10 @@ func Render(ctx *Context, data ...interface{}) *render {
 		}
 	}
 	return render
+}
+
+func RenderFile(ctx *Context, filename string) *render {
+	return Render(ctx).File(filename)
 }
 
 func RenderTemplate(ctx *Context, templateName string, data map[interface{}]interface{}) *render {

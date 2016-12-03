@@ -91,6 +91,10 @@ func (c *Controller) RenderTemplate() *render {
 	return RenderTemplate(c.Ctx, c.TplNames, c.Data)
 }
 
+func (c *Controller) RenderFile(filename string) *render {
+	return RenderFile(c.Ctx, filename)
+}
+
 //func (c *Controller) Render(contentType string, data []byte) (err error) {
 //	return Render(c.Ctx.ResponseWriter, contentType, data)
 //}

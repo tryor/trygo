@@ -25,15 +25,12 @@ type Context struct {
 }
 
 func newContext() *Context {
-	ctx := &Context{ResponseWriter: &Response{}}
-	//	if resp, ok := rw.(*Response); ok {
-	//		ctx.ResponseWriter = resp
-	//	} else {
-	//		ctx.ResponseWriter = &Response{ResponseWriter: rw}
-	//	}
-	//ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
-	ctx.ResponseWriter.Ctx = ctx
-	ctx.ResponseWriter.render = &render{rw: ctx.ResponseWriter}
+	//	ctx := &Context{ResponseWriter: &Response{}}
+	//	ctx.ResponseWriter.Ctx = ctx
+	//	ctx.ResponseWriter.render = &render{rw: ctx.ResponseWriter}
+
+	ctx := &Context{}
+	ctx.ResponseWriter = newResponse(ctx)
 	ctx.Input = newInput(ctx)
 	return ctx
 }
@@ -66,6 +63,7 @@ func (ctx *Context) Reset(rw http.ResponseWriter, r *http.Request, app *App) *Co
 	ctx.App = app
 	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
 	ctx.Input.Values = nil
+	ctx.ResponseWriter.render.Reset()
 	return ctx
 }
 
@@ -79,6 +77,10 @@ func (ctx *Context) Render(data ...interface{}) *render {
 
 func (ctx *Context) RenderTemplate(templateName string, data map[interface{}]interface{}) *render {
 	return RenderTemplate(ctx, templateName, data)
+}
+
+func (ctx *Context) RenderFile(filename string) *render {
+	return RenderFile(ctx, filename)
 }
 
 type input struct {

@@ -6,8 +6,7 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/trygo/ssss"
-	"trygo/ssss"
+	"github.com/trygo/ssss"
 )
 
 /**
@@ -81,7 +80,6 @@ func main() {
 
 	//render page
 	ssss.Get("/render/page", func(ctx *ssss.Context) {
-
 		users := make([]User, 0)
 		for i := 1; i < 10; i++ {
 			user := User{Id: int64(i), Account: "demo" + strconv.Itoa(i), Name: "demo", Sex: 1, Age: 18, Email: "demo@qq.com", Createtime: time.Now()}
@@ -106,24 +104,26 @@ func main() {
 			Wrap(ssss.ERROR_CODE_PARAM_ILLEGAL).Status(404)
 	})
 
+	//render file
+	ssss.Get("/render/file", func(ctx *ssss.Context) {
+		ctx.RenderFile("D:\\Go\\api\\go1.txt").Gzip()
+		//		ctx.RenderFile("D:\\GhostXPSP3M3.iso").Gzip()
+	})
+
 	//set auto wrap
 	ssss.Get("/render/wrap/set/(?P<auto>[^/]+)$", func(ctx *ssss.Context) {
 
-		ssss.Logger.Debug(ctx.Input.GetValue("auto"))
-
 		ctx.Input.Bind(&ssss.DefaultApp.Config.Render.Wrap, "auto")
 
-		ctx.Render("<script>alert(\"ok\");window.location=history.back();</script>").Html()
+		ctx.Render("<script>alert(\"ok\");window.location=\"/\";</script>").Html()
 	})
 
 	//set auto parse result wrap format
 	ssss.Get("/render/wrap/format/autoparse/(?P<auto>[^/]+)$", func(ctx *ssss.Context) {
 
-		ssss.Logger.Debug(ctx.Input.GetValue("auto"))
-
 		ctx.Input.Bind(&ssss.DefaultApp.Config.Render.AutoParseFormat, "auto")
 
-		ctx.Render("<script>alert(\"ok\");window.location=history.back();</script>").Html()
+		ctx.Render("<script>alert(\"ok\");window.location=\"/\";</script>").Html()
 	})
 
 	//设置静态文件根位置
