@@ -107,7 +107,6 @@ func main() {
 	//render file
 	ssss.Get("/render/file", func(ctx *ssss.Context) {
 		ctx.RenderFile("D:\\Go\\api\\go1.txt").Gzip()
-		//		ctx.RenderFile("D:\\GhostXPSP3M3.iso").Gzip()
 	})
 
 	//set auto wrap
