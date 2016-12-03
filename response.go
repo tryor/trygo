@@ -348,19 +348,23 @@ func (this *render) Exec() error {
 	this.rw.Header().Set("Content-Type", getContentType(this.contentType))
 	switch data := this.data.(type) {
 	case []byte:
-		if _, _, err := WriteBody(encoding, this.rw, data, func(encodingEnable bool, name string) {
+		if _, _, err := WriteBody(encoding, this.rw, data, func(encodingEnable bool, name string) error {
 			if encodingEnable {
 				this.rw.SetHeader("Content-Encoding", name)
 			} else {
 				this.rw.SetHeader("Content-Length", strconv.Itoa(len(data)))
 			}
+			if this.status > 0 {
+				this.rw.WriteHeader(this.status)
+			}
+			return nil
 		}); err != nil {
 			Logger.Warn("write data error, %v", err)
 			//this.err = err
 		}
 	case *os.File:
 		defer data.Close()
-		if _, _, err := WriteFile(encoding, this.rw, data, func(encodingEnable bool, name string) {
+		if _, _, err := WriteFile(encoding, this.rw, data, func(encodingEnable bool, name string) error {
 			if encodingEnable {
 				this.rw.SetHeader("Content-Encoding", name)
 			} else {
@@ -368,10 +372,15 @@ func (this *render) Exec() error {
 				if err != nil {
 					Logger.Error("stat file size error, %v", err)
 					this.err = err
+					return err
 				} else {
 					this.rw.SetHeader("Content-Length", strconv.FormatInt(stat.Size(), 10))
 				}
 			}
+			if this.status > 0 {
+				this.rw.WriteHeader(this.status)
+			}
+			return nil
 		}); err != nil {
 			Logger.Warn("write file error, %v", err)
 			//this.err = err

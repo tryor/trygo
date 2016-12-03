@@ -132,7 +132,7 @@ var (
 )
 
 // WriteFile reads from file and writes to writer by the specific encoding(gzip/deflate)
-func WriteFile(encoding string, writer io.Writer, file *os.File, beforeWritingFunc ...func(enable bool, name string)) (bool, string, error) {
+func WriteFile(encoding string, writer io.Writer, file *os.File, beforeWritingFunc ...func(enable bool, name string) error) (bool, string, error) {
 	stat, err := file.Stat()
 	if err != nil {
 		return false, "", err
@@ -140,7 +140,9 @@ func WriteFile(encoding string, writer io.Writer, file *os.File, beforeWritingFu
 	size := stat.Size()
 	if encoding == "" || size < int64(gzipMinLength) {
 		if len(beforeWritingFunc) > 0 {
-			beforeWritingFunc[0](false, "")
+			if err := beforeWritingFunc[0](false, ""); err != nil {
+				return false, "", err
+			}
 		}
 		_, err = io.Copy(writer, file)
 		return false, "", err
@@ -149,10 +151,12 @@ func WriteFile(encoding string, writer io.Writer, file *os.File, beforeWritingFu
 }
 
 // WriteBody reads  writes content to writer by the specific encoding(gzip/deflate)
-func WriteBody(encoding string, writer io.Writer, content []byte, beforeWritingFunc ...func(enable bool, name string)) (bool, string, error) {
+func WriteBody(encoding string, writer io.Writer, content []byte, beforeWritingFunc ...func(enable bool, name string) error) (bool, string, error) {
 	if encoding == "" || len(content) < gzipMinLength {
 		if len(beforeWritingFunc) > 0 {
-			beforeWritingFunc[0](false, "")
+			if err := beforeWritingFunc[0](false, ""); err != nil {
+				return false, "", err
+			}
 		}
 		_, err := writer.Write(content)
 		return false, "", err
@@ -162,7 +166,7 @@ func WriteBody(encoding string, writer io.Writer, content []byte, beforeWritingF
 
 // writeLevel reads from reader,writes to writer by specific encoding and compress level
 // the compress level is defined by deflate package
-func writeLevel(encoding string, writer io.Writer, reader io.Reader, level int, beforeWritingFunc ...func(enable bool, name string)) (bool, string, error) {
+func writeLevel(encoding string, writer io.Writer, reader io.Reader, level int, beforeWritingFunc ...func(enable bool, name string) error) (bool, string, error) {
 	var outputWriter resetWriter
 	var err error
 	var ce = noneCompressEncoder
@@ -177,7 +181,9 @@ func writeLevel(encoding string, writer io.Writer, reader io.Reader, level int, 
 	defer ce.put(outputWriter, level)
 
 	if len(beforeWritingFunc) > 0 {
-		beforeWritingFunc[0](encodeEnable, encoding)
+		if err := beforeWritingFunc[0](encodeEnable, encoding); err != nil {
+			return false, "", err
+		}
 	}
 
 	_, err = io.Copy(outputWriter, reader)
