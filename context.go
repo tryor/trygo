@@ -3,14 +3,10 @@ package ssss
 import (
 	"errors"
 	"fmt"
-	"reflect"
-	//	"strconv"
-	"strings"
-	//	"fmt"
 	"net/http"
 	"net/url"
-	//	"strings"
-	//	"time"
+	"reflect"
+	"strings"
 )
 
 type Context struct {
@@ -25,10 +21,6 @@ type Context struct {
 }
 
 func newContext() *Context {
-	//	ctx := &Context{ResponseWriter: &Response{}}
-	//	ctx.ResponseWriter.Ctx = ctx
-	//	ctx.ResponseWriter.render = &render{rw: ctx.ResponseWriter}
-
 	ctx := &Context{}
 	ctx.ResponseWriter = newResponse(ctx)
 	ctx.Input = newInput(ctx)
@@ -38,18 +30,6 @@ func newContext() *Context {
 func NewContext(rw http.ResponseWriter, r *http.Request, app *App) *Context {
 	ctx := newContext()
 	ctx.Reset(rw, r, app)
-
-	//	ctx := &Context{Request: r, App: app}
-	//	if resp, ok := rw.(*Response); ok {
-	//		ctx.ResponseWriter = resp
-	//	} else {
-	//		ctx.ResponseWriter = &Response{ResponseWriter: rw}
-	//	}
-	//	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
-	//	ctx.ResponseWriter.Ctx = ctx
-	//	ctx.ResponseWriter.render = &render{rw: ctx.ResponseWriter}
-	//	ctx.Input = newInput(ctx)
-
 	return ctx
 }
 
