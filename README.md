@@ -56,35 +56,8 @@ ssss.Post(pattern string, f HandlerFunc)
 ssss.Put(pattern string, f HandlerFunc)
  ...
  
- 
- 
 for example： 
-
-ssss.Get("/", func(ctx *Context) {
-	ctx.Render("hello world")
-})
-
-ssss.RegisterHandler("^/admin/(?P<token>[^/]+)/?$", &AdminHandler{})
-ssss.RegisterHandler("/admin/?$", &AdminHandler{})
-ssss.RegisterRESTful("/orders", &OrdersController{})
-
-
-ssss.Register("GET", "/f1", &MainController{}, "Func1")
-ssss.Register("POST", "/f2", &MainController{}, "Func2")
-ssss.Register("GET|POST", "/f3", &MainController{}, "Func3")
-ssss.Register("PUT", "/f4", &MainController{}, "Func4")
-ssss.Register("GET|POST", "/admin/login", &AdminController{}, "Login")
-ssss.Register("*", "/admin/index", &AdminController{}, "Index")
-
-ssss.Register("GET|POST", "/.*", &MainController{}, "Func5")
-ssss.Register("GET|POST", "/admin/.*", &AdminController{}, "Index")
-
-app.Register("GET|POST", "/user/create", &MainController{}, "Create(userform CreateUserForm)")
-app.Register("GET|POST", "/user/edit", &MainController{}, "Edit(userform EditUserForm)")
-app.Register("GET|POST", "/user/query", &MainController{}, "Query(userform QueryUserForm)")
-app.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
-
-
+@see (https://github.com/trygo/ssss/tree/master/examples/router)
 
 
 ```
@@ -148,18 +121,19 @@ ssss.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd 
 
 
 ```
+
+## Render
+============
+All the default render:
+
+```go
+@see (https://github.com/trygo/ssss/tree/master/examples/render)
+```
+
 ## Static files
 ============
 ssss.SetStaticPath("/", "static/webroot/")
 
-## Render
-============
-
-All the default render:
-
-```go
-
-```
 
 ## View / Template
 ============
@@ -179,7 +153,7 @@ then ssss will find the file in the path:static/templates/admin/add.tpl
 
 if you don't set TplNames,sss will find like this:
 ```go
-c.TplNames = c.ChildName + "/" + c.MethodName + "." + c.TplExt
+c.TplNames = c.ChildName + "/" + c.ActionName + "." + c.TplExt
 ```
 
 render template
