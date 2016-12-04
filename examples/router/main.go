@@ -3,12 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
 	"strconv"
 	"time"
 
-	//	"github.com/trygo/ssss"
-	"trygo/ssss"
+	"github.com/trygo/ssss"
 )
 
 /**
@@ -16,13 +14,6 @@ import (
  */
 
 func main() {
-	go func() {
-		//http://localhost:6060/debug/pprof/
-		ssss.Logger.Info("%v", http.ListenAndServe("localhost:6060", nil))
-	}()
-
-	//ssss.DefaultApp.Config.RunMode = ssss.DEV
-
 	//router, get
 	ssss.Get("/router/get", func(ctx *ssss.Context) {
 		p1 := ctx.Input.GetValue("p1")
