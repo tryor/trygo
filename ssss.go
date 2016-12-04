@@ -19,8 +19,8 @@ func init() {
 	AppPath, _ = os.Getwd()
 }
 
-func Register(method string, path string, c IController, name string, params ...string) *App {
-	DefaultApp.Register(method, path, c, name, params...)
+func Register(method string, pattern string, c IController, name string, tags ...string) *App {
+	DefaultApp.Register(method, pattern, c, name, tags...)
 	return DefaultApp
 }
 

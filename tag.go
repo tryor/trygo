@@ -197,24 +197,32 @@ type patternTag struct {
 }
 
 //pnames key is parmeter name, value is parmeter type
-func parseTags(pnames map[string]reflect.Type, tags []string, formDomainModel bool) (formatedTags Taginfos) {
-	if len(pnames) == 0 {
+func parseTags(pnametypes map[string]reflect.Type, tags []string, formDomainModel bool) (formatedTags Taginfos) {
+	if len(pnametypes) == 0 {
 		return
 	}
-	formatedTags = make(Taginfos)
-	alltags := reflect.StructTag(strings.Join(tags, " "))
-	for pname, typ := range pnames {
-		parseTag(pname, typ, alltags.Get(pname), formDomainModel, formatedTags)
+
+	pnames := make(map[string]reflect.Type)
+	for k, v := range pnametypes {
+		pnames[k] = v
 	}
-	//fmt.Println("formatedTags:", formatedTags)
+
+	formatedTags = make(Taginfos)
+	for _, tag := range tags {
+		name, tag := pretreatTag(tag)
+		if typ, ok := pnames[name]; ok {
+			parseTag(name, typ, tag, formDomainModel, formatedTags)
+			delete(pnames, name)
+		}
+	}
+
+	for name, typ := range pnames {
+		parseTag(name, typ, "", formDomainModel, formatedTags)
+	}
 	return
 }
 
-//分析tag信息
-//typ  - 属性类型
-//tag - 属性tag信息, `name:"limit:10,scope:[One Two Three],default:Two,require"`
-func parseOneTag(kind reflect.Kind, tag string) *tagInfo {
-	stag := tag
+func pretreatTag(tag string) (name, rettag string) {
 	pair := strings.SplitN(tag, ":\"", 2)
 	if len(pair) > 1 {
 		tag = pair[1]
@@ -222,7 +230,16 @@ func parseOneTag(kind reflect.Kind, tag string) *tagInfo {
 			tag = tag[0 : len(tag)-1]
 		}
 	}
-	tag = strings.TrimSpace(tag)
+	pair = strings.SplitN(tag, ",", 2)
+	return strings.TrimSpace(pair[0]), strings.TrimSpace(tag)
+}
+
+//分析tag信息
+//typ  - 属性类型
+//tag - 属性tag信息, `:"name,limit:10,scope:[One Two Three],default:Two,require"`
+func parseOneTag(kind reflect.Kind, tag string) *tagInfo {
+	stag := tag
+	_, tag = pretreatTag(tag)
 	if tag == "" {
 		panic("tag is empty, tag:" + stag)
 	}
@@ -234,15 +251,12 @@ func parseOneTag(kind reflect.Kind, tag string) *tagInfo {
 		panic("ssss: the struct type is not supported, @see ParseStructTag()")
 	}
 
-	if len(tag) > 0 {
-		if taginfo := parseTagItems(kind, tag); taginfo != nil {
-			return taginfo
-		} else {
-			panic("parse fail, tag:" + stag)
-		}
+	if taginfo := parseTagItems(kind, tag); taginfo != nil {
+		return taginfo
 	} else {
-		panic("tag is empty or format error, tag:" + stag)
+		panic("parse fail, tag:" + stag)
 	}
+
 	return nil
 }
 
@@ -270,12 +284,18 @@ func parseTag(pname string, ptype reflect.Type, tag string, formDomainModel bool
 				attrName = pname
 			} else {
 				paramTag := strings.TrimSpace(f.Tag.Get("field"))
+				if paramTag == "-" {
+					continue
+				}
 				if paramTag != "" {
 					stag = paramTag
 				}
 				paramTags := strings.SplitN(paramTag, ",", 2)
 				if len(paramTag) > 0 {
 					attrName = strings.TrimSpace(paramTags[0])
+					if attrName == "-" {
+						continue
+					}
 				}
 				if len(attrName) == 0 {
 					attrName = strings.ToLower(f.Name[0:1]) + f.Name[1:]

@@ -23,17 +23,17 @@ type Controller struct {
 	Data           map[interface{}]interface{}
 	Ctx            *Context
 	ControllerName string
-	MethodName     string
+	ActionName     string
 	TplNames       string
 	TplExt         string
 	App            *App
 }
 
-func (c *Controller) Init(app *App, ctx *Context, controllerName, methodName string) {
+func (c *Controller) Init(app *App, ctx *Context, controllerName, actionName string) {
 	c.Data = make(map[interface{}]interface{})
 	c.App = app
 	c.ControllerName = controllerName
-	c.MethodName = methodName
+	c.ActionName = actionName
 	c.Ctx = ctx
 	c.TplExt = "tpl"
 }
@@ -86,7 +86,7 @@ func (c *Controller) Render(data ...interface{}) *render {
 
 func (c *Controller) RenderTemplate() *render {
 	if c.TplNames == "" {
-		c.TplNames = c.ControllerName + "/" + c.MethodName + "." + c.TplExt
+		c.TplNames = c.ControllerName + "/" + c.ActionName + "." + c.TplExt
 	}
 	return RenderTemplate(c.Ctx, c.TplNames, c.Data)
 }

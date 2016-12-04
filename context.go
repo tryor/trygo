@@ -144,14 +144,27 @@ func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) err
 	if !value.CanSet() {
 		panic("non-settable variable can not bind: " + key)
 	}
-	rv, err := input.bind(key, value.Type(), taginfos...)
+
+	typ := value.Type()
+	isStruct := typ.Kind() == reflect.Struct
+	if isStruct {
+		taginfos = append(taginfos, parseTags(map[string]reflect.Type{key: typ}, []string{}, input.ctx.App.Config.FormDomainModel))
+	}
+
+	rv, err := input.bind(key, typ, taginfos...)
 	if err != nil {
 		input.ctx.Error = err
 		if input.ctx.App.Config.ThrowBindParamPanic {
-			if input.ctx.App.Config.Render.Wrap {
-				panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, fmt.Sprintf("%v=%v,cause:%v", key, input.ctx.Input.Values[key], err)))
+			//if input.ctx.App.Config.Render.Wrap {
+			var msg string
+			if isStruct {
+				msg = fmt.Sprintf("%v, cause:%s.%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, err)
+			} else {
+				msg = fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, input.ctx.Input.Values[key], err)
 			}
-			panic(err)
+			panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
+			//}
+			//panic(err)
 		}
 		return err
 	}
@@ -194,10 +207,16 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 			if f.Anonymous {
 				name = pname
 			} else {
-				paramTag := f.Tag.Get("field")
+				paramTag := strings.TrimSpace(f.Tag.Get("field"))
+				if paramTag == "-" {
+					continue
+				}
 				paramTags := strings.SplitN(paramTag, ",", 2)
 				if len(paramTag) > 0 {
 					name = strings.TrimSpace(paramTags[0])
+					if name == "-" {
+						continue
+					}
 				}
 				if len(name) == 0 {
 					name = strings.ToLower(f.Name[0:1]) + f.Name[1:]

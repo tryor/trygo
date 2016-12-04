@@ -284,11 +284,11 @@ func (this *render) Reset() {
 	this.err = nil
 	this.status = 0
 	this.started = false
-	this.wrap = false //this.rw.Ctx.App.Config.Render.Wrap
+	this.wrap = false
 	this.noWrap = false
 	this.wrapCode = 0
 	this.gzip = false
-	//this.canceled = 0 //this.IsCanceled(true)
+	//this.canceled = 0
 }
 
 func (this *render) Exec() error {

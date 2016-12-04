@@ -54,11 +54,11 @@ type iRouter interface {
 
 type defaultRouter struct {
 	app            *App
-	controllerType reflect.Type        //控制器类型
-	funcName       string              //函数名称
-	funcType       reflect.Type        //函数类型
-	funcParamNames []string            //函数参数名称列表
-	funcParamTags  map[string]*tagInfo //参数的Tag信息
+	controllerType reflect.Type //控制器类型
+	funcName       string       //函数名称
+	funcType       reflect.Type //函数类型
+	funcParamNames []string     //函数参数名称列表
+	funcParamTags  Taginfos     //参数的Tag信息
 }
 
 type restfulRouter struct {
@@ -126,7 +126,14 @@ func (router *defaultRouter) Run(ctx *Context) {
 				if err != nil {
 					ctx.Error = err
 					if router.app.Config.ThrowBindParamPanic {
-						panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, fmt.Sprintf("%v=%v,cause:%v", name, ctx.Input.Values[name], err)))
+						var msg string
+						if typ.Kind() == reflect.Struct {
+							msg = fmt.Sprintf("%v, cause:%s.%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], name, err)
+						} else {
+							msg = fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], name, ctx.Input.Values[name], err)
+						}
+						panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
+						//panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, fmt.Sprintf("%v=%v,cause:%v", name, ctx.Input.Values[name], err)))
 					}
 					inx[idx] = reflect.Indirect(reflect.New(typ))
 				} else {
@@ -214,6 +221,9 @@ func (this *ControllerRegister) Add(methods string, pattern string, c IControlle
 
 	//parse tags
 	routerinfo.funcParamTags = parseTags(methodParamTypes, tags, this.app.Config.FormDomainModel)
+	if this.app.Config.RunMode == DEV {
+		Logger.Debug("pattern:%v, action:%v.%v, tags:%v  => formatedTags:%v", pattern, reflect.TypeOf(c), name, tags, routerinfo.funcParamTags)
+	}
 
 	this.add(methods, pattern, routerinfo)
 }
@@ -335,7 +345,6 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	ctx := this.pool.Get().(*Context)
 	ctx.Reset(rw, r, this.app)
 	defer this.pool.Put(ctx)
-	//ctx := NewContext(rw, r, this.app)
 
 	if this.app.Config.RecoverFunc != nil {
 		defer this.app.Config.RecoverFunc(ctx)
@@ -392,7 +401,6 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	//http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
 	err := Render(ctx, "Method Not Allowed").Text().
 		Status(http.StatusMethodNotAllowed).
 		Exec()
