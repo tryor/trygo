@@ -6,7 +6,8 @@ import (
 	"mime/multipart"
 	"os"
 
-	"github.com/trygo/ssss"
+	//"github.com/trygo/ssss"
+	"trygo/ssss"
 )
 
 func main() {
@@ -30,7 +31,7 @@ func (c *UploadController) Upload() {
 			saveFile(file)
 		}
 	}
-	c.Ctx.Redirect(301, "/files")
+	c.Ctx.Redirect(302, "/files")
 }
 
 func saveFile(fh *multipart.FileHeader) {

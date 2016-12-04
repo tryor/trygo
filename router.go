@@ -1,6 +1,7 @@
 package ssss
 
 import (
+	"io"
 	"sync"
 	//	"errors"
 	"fmt"
@@ -413,7 +414,12 @@ func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, r
 	if this.app.Config.AutoParseRequest {
 		err := ctx.Input.Parse()
 		if err != nil {
-			panic(err)
+			if err == io.EOF || err == io.ErrUnexpectedEOF || strings.HasSuffix(err.Error(), io.EOF.Error()) {
+				Logger.Warn("client interrupt request, cause:%v", err)
+				return
+			} else {
+				panic(err)
+			}
 		}
 	}
 

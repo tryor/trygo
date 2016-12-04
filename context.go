@@ -88,7 +88,7 @@ func (input *input) Parse() error {
 
 	form, err := parseForm(input.ctx.Request, input.ctx.Multipart)
 	if err != nil {
-		Logger.Error("%v", err)
+		//Logger.Error("%v", err)
 		return err
 	}
 	input.Values = form
