@@ -55,12 +55,12 @@ ssss.Get(pattern string, f HandlerFunc)
 ssss.Post(pattern string, f HandlerFunc) 
 ssss.Put(pattern string, f HandlerFunc)
  ...
- 
+ ```
+
 for example： 
 @see (https://github.com/trygo/ssss/tree/master/examples/router)
 
 
-```
 
 ## Request
 ============
@@ -126,9 +126,9 @@ ssss.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd 
 ============
 All the default render:
 
-```go
+
 @see (https://github.com/trygo/ssss/tree/master/examples/render)
-```
+
 
 ## Static files
 ============
