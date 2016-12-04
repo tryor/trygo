@@ -341,7 +341,6 @@ func convMethod(m string) int8 {
 }
 
 func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-
 	ctx := this.pool.Get().(*Context)
 	ctx.Reset(rw, r, this.app)
 	defer this.pool.Put(ctx)
@@ -411,12 +410,14 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 }
 
 func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, restform url.Values) {
-	err := ctx.Input.Parse()
-	if err != nil {
-		panic(err)
+	if this.app.Config.AutoParseRequest {
+		err := ctx.Input.Parse()
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	if restform != nil {
+	if restform != nil && len(restform) > 0 {
 		ctx.Input.AddValues(restform)
 	}
 

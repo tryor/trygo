@@ -20,6 +20,9 @@ type config struct {
 	//Maximum duration before timing out write of the response, 默认:0(不超时)
 	WriteTimeout time.Duration
 
+	//是否自动分析请求参数，默认:true
+	AutoParseRequest bool
+
 	//如果使用结构体来接收请求参数，可在此设置是否采用域模式传递参数, 默认:false
 	//如果值为true, 需要这样传递请求参数：user.account, user为方法参数名(为结构类型)，account为user结构字段名
 	FormDomainModel bool
@@ -70,6 +73,7 @@ func newConfig() *config {
 	cfg.ReadTimeout = 0
 	cfg.WriteTimeout = 0
 
+	cfg.AutoParseRequest = true
 	cfg.FormDomainModel = false
 	cfg.ThrowBindParamPanic = true
 

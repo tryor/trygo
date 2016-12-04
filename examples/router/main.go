@@ -138,8 +138,8 @@ type User struct {
 }
 
 type page struct {
-	Pno   int         `json:"pno" xml:"pno,attr"`     //页号
-	Psize int         `json:"psize" xml:"psize,attr"` //一页数据行数
-	Total int         `json:"total" xml:"total,attr"` //总数
-	Data  interface{} `json:"data" xml:"data"`        //具体数据
+	Pno   int         `json:"pno" xml:"pno,attr"`
+	Psize int         `json:"psize" xml:"psize,attr"`
+	Total int         `json:"total" xml:"total,attr"`
+	Data  interface{} `json:"data" xml:"data"`
 }
