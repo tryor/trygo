@@ -6,8 +6,7 @@ import (
 	"mime/multipart"
 	"os"
 
-	//"github.com/trygo/ssss"
-	"trygo/ssss"
+	"github.com/trygo/ssss"
 )
 
 func main() {
