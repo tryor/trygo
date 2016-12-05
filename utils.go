@@ -2,6 +2,7 @@ package ssss
 
 import (
 	"errors"
+	"os"
 	//	"fmt"
 	"mime"
 	"net/http"
@@ -17,6 +18,15 @@ const (
 	chunkSize        = 4 << 10  // 4 KB chunks
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
+
+func fileExists(name string) bool {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}
 
 //func fileStringSize(f *os.File) string {
 //	stat, err := data.Stat()

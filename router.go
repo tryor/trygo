@@ -45,8 +45,9 @@ var (
 type HandlerFunc func(*Context)
 
 type controllerInfo struct {
-	methods []int8 //HTTP请求方法
-	router  iRouter
+	methods       []int8 //HTTP请求方法
+	router        iRouter
+	patternLength int
 }
 
 type iRouter interface {
@@ -148,16 +149,18 @@ func (router *defaultRouter) Run(ctx *Context) {
 }
 
 type ControllerRegister struct {
-	routermap  map[string]*controllerInfo
-	patternmap map[*regexp.Regexp]*controllerInfo
-	app        *App
-	pool       sync.Pool
+	explicitmap map[string]*controllerInfo
+	relativemap map[string]*controllerInfo
+	patternmap  map[*regexp.Regexp]*controllerInfo
+	app         *App
+	pool        sync.Pool
 }
 
 func NewControllerRegister() *ControllerRegister {
 	cr := &ControllerRegister{
-		routermap:  make(map[string]*controllerInfo),
-		patternmap: make(map[*regexp.Regexp]*controllerInfo),
+		explicitmap: make(map[string]*controllerInfo),
+		relativemap: make(map[string]*controllerInfo),
+		patternmap:  make(map[*regexp.Regexp]*controllerInfo),
 	}
 	cr.pool.New = func() interface{} {
 		return newContext()
@@ -243,7 +246,11 @@ func (this *ControllerRegister) add(methods, pattern string, router iRouter) {
 		panic("http: invalid pattern " + pattern)
 	}
 
-	if _, ok := this.routermap[pattern]; ok {
+	if _, ok := this.explicitmap[pattern]; ok {
+		panic("http: multiple registrations for " + pattern)
+	}
+
+	if _, ok := this.relativemap[pattern]; ok {
 		panic("http: multiple registrations for " + pattern)
 	}
 
@@ -281,9 +288,16 @@ func (this *ControllerRegister) add(methods, pattern string, router iRouter) {
 		if err != nil {
 			panic(err)
 		}
+		controllerInfo.patternLength = len(pattern)
 		this.patternmap[r] = controllerInfo
 	} else {
-		this.routermap[pattern] = controllerInfo
+		controllerInfo.patternLength = len(pattern)
+		if pattern[len(pattern)-1] == '/' {
+			this.relativemap[pattern] = controllerInfo
+		} else {
+			this.explicitmap[pattern] = controllerInfo
+		}
+
 	}
 }
 
@@ -353,10 +367,23 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	}
 
 	path := r.URL.Path
+	pathlen := len(path)
 
-	//http service route
-	router, ok := this.routermap[path]
-	if ok {
+	//http service router
+	router, ok := this.explicitmap[path]
+	if !ok {
+		var n = 0
+		for pattern, r := range this.relativemap {
+			if !(pathlen >= r.patternLength && path[0:r.patternLength] == pattern) {
+				continue
+			}
+			if router == nil || r.patternLength > n {
+				n = r.patternLength
+				router = r
+			}
+		}
+	}
+	if router != nil {
 		if this.hasHttpMethod(router, convMethod(r.Method)) {
 			this.call(router, ctx, nil)
 			return
@@ -435,6 +462,17 @@ func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, r
 			panic(err)
 		}
 	}
+}
+
+func pathMatch(pattern, path string) bool {
+	if len(pattern) == 0 {
+		return false
+	}
+	n := len(pattern)
+	if pattern[n-1] != '/' {
+		return pattern == path
+	}
+	return len(path) >= n && path[0:n] == pattern
 }
 
 func defaultRecoverFunc(ctx *Context) {
