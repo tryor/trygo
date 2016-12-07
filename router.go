@@ -1,10 +1,8 @@
 package ssss
 
 import (
-	"io"
-	"sync"
-	//	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -12,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const (

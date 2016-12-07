@@ -17,25 +17,25 @@ import (
 	"sync/atomic"
 )
 
-type Response struct {
+type response struct {
 	http.ResponseWriter
 	Ctx    *Context
 	render *render
 }
 
-func newResponse(ctx *Context) *Response {
-	r := &Response{Ctx: ctx}
-	r.render = &render{rw: r}
-	return r
+func newResponse(ctx *Context) *response {
+	rw := &response{Ctx: ctx}
+	rw.render = &render{rw: rw}
+	return rw
 }
 
-func (this *Response) Error(code int, message string) (err error) {
+func (this *response) Error(code int, message string) (err error) {
 	this.ResponseWriter.WriteHeader(code)
 	_, err = this.ResponseWriter.Write([]byte(message))
 	return
 }
 
-func (this *Response) ContentType(typ string) {
+func (this *response) ContentType(typ string) {
 	ctype := getContentType(typ)
 	if ctype != "" {
 		this.ResponseWriter.Header().Set("Content-Type", ctype)
@@ -44,7 +44,7 @@ func (this *Response) ContentType(typ string) {
 	}
 }
 
-func (this *Response) AddHeader(hdr string, val interface{}) {
+func (this *response) AddHeader(hdr string, val interface{}) {
 	if v, ok := val.(string); ok {
 		this.ResponseWriter.Header().Add(hdr, v)
 	} else {
@@ -52,7 +52,7 @@ func (this *Response) AddHeader(hdr string, val interface{}) {
 	}
 }
 
-func (this *Response) SetHeader(hdr string, val interface{}) {
+func (this *response) SetHeader(hdr string, val interface{}) {
 	if v, ok := val.(string); ok {
 		this.ResponseWriter.Header().Set(hdr, v)
 	} else {
@@ -60,21 +60,25 @@ func (this *Response) SetHeader(hdr string, val interface{}) {
 	}
 }
 
-func (this *Response) Flush() {
+func (this *response) Flush() {
 	if f, ok := this.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
 }
 
-func (this *Response) CloseNotify() <-chan bool {
+func (this *response) CloseNotify() <-chan bool {
 	if cn, ok := this.ResponseWriter.(http.CloseNotifier); ok {
 		return cn.CloseNotify()
 	}
 	return nil
 }
 
+func (this *response) AddCookie(c *http.Cookie) {
+	this.Header().Add("Set-Cookie", c.String())
+}
+
 type render struct {
-	rw *Response
+	rw *response
 
 	format       string
 	contentType  string
@@ -188,18 +192,24 @@ func (this *render) Xml() *render {
 	return this
 }
 
-func (this *render) Header(key string, value ...string) *render {
+func (this *render) Header(key string, value ...interface{}) *render {
+	h := this.rw.Header()
 	if len(value) == 0 {
-		this.rw.SetHeader(key, "")
+		h.Set(key, "")
 		return this
 	}
 	if len(value) == 1 {
-		this.rw.SetHeader(key, value[0])
+		h.Set(key, toString(value[0]))
 		return this
 	}
 	for _, v := range value {
-		this.rw.AddHeader(key, v)
+		h.Add(key, toString(v))
 	}
+	return this
+}
+
+func (this *render) Cookie(c *http.Cookie) *render {
+	this.rw.AddCookie(c)
 	return this
 }
 

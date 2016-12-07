@@ -11,7 +11,7 @@ import (
 
 type Context struct {
 	App            *App
-	ResponseWriter *Response
+	ResponseWriter *response
 	Request        *http.Request
 	Multipart      bool
 	Input          *input
@@ -34,8 +34,8 @@ func NewContext(rw http.ResponseWriter, r *http.Request, app *App) *Context {
 }
 
 func (ctx *Context) Reset(rw http.ResponseWriter, r *http.Request, app *App) *Context {
-	if resp, ok := rw.(*Response); ok {
-		ctx.ResponseWriter = resp
+	if resp, ok := rw.(*response); ok {
+		ctx.ResponseWriter.ResponseWriter = resp.ResponseWriter
 	} else {
 		ctx.ResponseWriter.ResponseWriter = rw
 	}

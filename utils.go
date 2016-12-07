@@ -2,6 +2,7 @@ package ssss
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	//	"fmt"
 	"mime"
@@ -18,6 +19,18 @@ const (
 	chunkSize        = 4 << 10  // 4 KB chunks
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
+
+func toString(v interface{}) string {
+	switch s := v.(type) {
+	case string:
+		return s
+	case *string:
+		return *s
+	default:
+		return fmt.Sprint(v)
+	}
+
+}
 
 func fileExists(name string) bool {
 	if _, err := os.Stat(name); err != nil {
