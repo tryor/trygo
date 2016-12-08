@@ -15,13 +15,14 @@ import (
 )
 
 type TemplateRegister struct {
+	app         *App
 	tplFuncMap  template.FuncMap
 	Templates   map[string]*template.Template
 	TemplateExt []string
 }
 
-func NewTemplateRegister() *TemplateRegister {
-	tr := &TemplateRegister{}
+func NewTemplateRegister(app *App) *TemplateRegister {
+	tr := &TemplateRegister{app: app}
 	tr.Templates = make(map[string]*template.Template)
 	tr.tplFuncMap = make(template.FuncMap)
 	tr.TemplateExt = make([]string, 0)
@@ -208,7 +209,7 @@ func (this *TemplateRegister) buildTemplate(dir string) error {
 		return self.visit(this, path, f, err)
 	})
 	if err != nil {
-		Logger.Error("filepath.Walk() returned %v", err)
+		this.app.Logger.Error("filepath.Walk() returned %v", err)
 		return err
 	}
 	for k, v := range self.files {

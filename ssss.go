@@ -3,8 +3,6 @@ package ssss
 import (
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 )
 
 const VERSION = "0.1.0"
@@ -97,19 +95,6 @@ func AddTemplateFunc(key string, funname interface{}) error {
 	return DefaultApp.TemplateRegister.AddFuncMap(key, funname)
 }
 
-func Run(listen ...string) {
-	if len(listen) > 0 {
-		var err error
-		pair := strings.SplitN(listen[0], ":", 2)
-		if len(pair) > 1 {
-			DefaultApp.Config.HttpAddr = pair[0]
-			DefaultApp.Config.HttpPort, err = strconv.Atoi(pair[1])
-		} else {
-			DefaultApp.Config.HttpPort, err = strconv.Atoi(pair[0])
-		}
-		if err != nil {
-			panic(err)
-		}
-	}
-	DefaultApp.Run()
+func Run(listener ...HttpServeListener) {
+	DefaultApp.Run(listener...)
 }

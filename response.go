@@ -226,7 +226,7 @@ func (this *render) File(filename string) *render {
 		}
 		this.data, this.err = os.Open(filename)
 		if this.err != nil {
-			Logger.Error("open file error:%v, filename:%s", this.err, filename)
+			this.rw.Ctx.App.Logger.Error("open file error:%v, filename:%s", this.err, filename)
 		}
 	}
 	return this
@@ -243,7 +243,7 @@ func (this *render) Template(templateName string, data map[interface{}]interface
 		}
 		this.data, this.err = BuildTemplateData(this.rw.Ctx.App, templateName, data)
 		if this.err != nil {
-			Logger.Error("template execute error:%v, template:%s", this.err, templateName)
+			this.rw.Ctx.App.Logger.Error("template execute error:%v, template:%s", this.err, templateName)
 		}
 	}
 	return this
@@ -278,7 +278,7 @@ func (this *render) Data(data interface{}) *render {
 		}
 
 		if this.err != nil {
-			Logger.Error("error:%v, data:%v", this.err, data)
+			this.rw.Ctx.App.Logger.Error("error:%v, data:%v", this.err, data)
 		}
 
 	}
@@ -369,7 +369,7 @@ func (this *render) Exec() error {
 			}
 			return nil
 		}); err != nil {
-			Logger.Warn("write data error, %v", err)
+			this.rw.Ctx.App.Logger.Warn("write data error, %v", err)
 			//this.err = err
 		}
 	case *os.File:
@@ -380,7 +380,7 @@ func (this *render) Exec() error {
 			} else {
 				stat, err := data.Stat()
 				if err != nil {
-					Logger.Error("stat file size error, %v", err)
+					this.rw.Ctx.App.Logger.Error("stat file size error, %v", err)
 					this.err = err
 					return err
 				} else {
@@ -392,12 +392,12 @@ func (this *render) Exec() error {
 			}
 			return nil
 		}); err != nil {
-			Logger.Warn("write file error, %v", err)
+			this.rw.Ctx.App.Logger.Warn("write file error, %v", err)
 			//this.err = err
 		}
 	default:
 		this.err = errors.New("data type not supported")
-		Logger.Error("%v", this.err)
+		this.rw.Ctx.App.Logger.Error("%v", this.err)
 	}
 
 	if this.err != nil && !this.IsCanceled(true) {
@@ -458,7 +458,7 @@ func BuildTemplateData(app *App, tplnames string, data map[interface{}]interface
 
 //fmtAndJsoncallback[0] - format, 值指示响应结果格式，当前支持:json或xml, 默认为:json
 //fmtAndJsoncallback[1] - jsoncallback 如果是json格式结果，支持jsoncallback
-func renderError(rw http.ResponseWriter, errdata interface{}, status int, wrap bool, wrapcode int, fmtAndJsoncallback ...string) error {
+func renderError(resp *response, errdata interface{}, status int, wrap bool, wrapcode int, fmtAndJsoncallback ...string) error {
 	var format, jsoncallback string
 	if len(fmtAndJsoncallback) > 0 {
 		format = fmtAndJsoncallback[0]
@@ -476,15 +476,15 @@ func renderError(rw http.ResponseWriter, errdata interface{}, status int, wrap b
 
 	if err != nil {
 		//http.Error(rw, err.Error(), http.StatusInternalServerError)
-		Logger.Error("format:%v, error:%v, data:%v", format, err, errdata)
+		resp.Ctx.App.Logger.Error("format:%v, error:%v, data:%v", format, err, errdata)
 		return err
 	}
-	return renderData(rw, toContentType(format), content, status)
+	return renderData(resp, toContentType(format), content, status)
 }
 
 //fmtAndJsoncallback[0] - fmt, 值指示响应结果格式，当前支持:json或xml, 默认为:json
 //fmtAndJsoncallback[1] - jsoncallback 如果是json格式结果，支持jsoncallback
-func renderSucceed(rw http.ResponseWriter, data interface{}, wrap bool, fmtAndJsoncallback ...string) error {
+func renderSucceed(resp *response, data interface{}, wrap bool, fmtAndJsoncallback ...string) error {
 	var format, jsoncallback string
 	if len(fmtAndJsoncallback) > 0 {
 		format = fmtAndJsoncallback[0]
@@ -500,26 +500,26 @@ func renderSucceed(rw http.ResponseWriter, data interface{}, wrap bool, fmtAndJs
 	}
 	if err != nil {
 		//http.Error(rw, err.Error(), http.StatusInternalServerError)
-		Logger.Error("format:%v, error:%v, data:%v", format, err, data)
+		resp.Ctx.App.Logger.Error("format:%v, error:%v, data:%v", format, err, data)
 		return err
 	}
-	return renderData(rw, toContentType(format), content)
+	return renderData(resp, toContentType(format), content)
 }
 
-func renderBuffer(rw http.ResponseWriter, contentType string, buff *bytes.Buffer, status ...int) error {
+func renderBuffer(rw *response, contentType string, buff *bytes.Buffer, status ...int) error {
 	rw.Header().Set("Content-Type", getContentType(contentType))
 	if len(status) > 0 && status[0] != 0 {
 		rw.WriteHeader(status[0])
 	}
 	_, err := io.Copy(rw, buff)
 	if err != nil {
-		Logger.Error("error:%v, buff.length:%v", err, buff.Len())
+		rw.Ctx.App.Logger.Error("error:%v, buff.length:%v", err, buff.Len())
 		return err
 	}
 	return nil
 }
 
-func renderData(rw http.ResponseWriter, contentType string, data []byte, status ...int) error {
+func renderData(rw *response, contentType string, data []byte, status ...int) error {
 	rw.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	rw.Header().Set("Content-Type", getContentType(contentType))
 	if len(status) > 0 && status[0] != 0 {
@@ -527,7 +527,7 @@ func renderData(rw http.ResponseWriter, contentType string, data []byte, status 
 	}
 	_, err := rw.Write(data)
 	if err != nil {
-		Logger.Error("error:%v, data.length:%v", err, len(data))
+		rw.Ctx.App.Logger.Error("error:%v, data.length:%v", err, len(data))
 		return err
 	}
 	return nil

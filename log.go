@@ -7,24 +7,12 @@ import (
 	"time"
 )
 
-type ILogger interface {
+type Logger interface {
 	Debug(format string, args ...interface{})
 	Info(format string, args ...interface{})
 	Warn(format string, args ...interface{})
 	Error(format string, args ...interface{})
 	Critical(format string, args ...interface{})
-}
-
-var Logger ILogger
-
-func SetLogger(logger ILogger) {
-	Logger = logger
-}
-
-func init() {
-	if Logger == nil {
-		Logger = &defaultLogger{}
-	}
 }
 
 type defaultLogger struct{}
@@ -38,6 +26,10 @@ func (this *defaultLogger) Write(p []byte) (n int, err error) {
 	}
 	fmt.Printf("%v [LOG] %v %v\n", formatNow(), determine(5), string(p))
 	return len(p), nil
+}
+
+func (l *defaultLogger) Printf(format string, args ...interface{}) {
+	fmt.Printf("%v [LOG] %v %v\n", formatNow(), determine(3), fmt.Sprintf(format, args...))
 }
 
 func (this *defaultLogger) Debug(format string, args ...interface{}) {

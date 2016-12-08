@@ -155,8 +155,9 @@ type ControllerRegister struct {
 	pool        sync.Pool
 }
 
-func NewControllerRegister() *ControllerRegister {
+func NewControllerRegister(app *App) *ControllerRegister {
 	cr := &ControllerRegister{
+		app:         app,
 		explicitmap: make(map[string]*controllerInfo),
 		relativemap: make(map[string]*controllerInfo),
 		patternmap:  make(map[*regexp.Regexp]*controllerInfo),
@@ -225,7 +226,7 @@ func (this *ControllerRegister) Add(methods string, pattern string, c IControlle
 	//parse tags
 	routerinfo.funcParamTags = parseTags(methodParamTypes, tags, this.app.Config.FormDomainModel)
 	if this.app.Config.RunMode == DEV {
-		Logger.Debug("pattern:%v, action:%v.%v, tags:%v  => formatedTags:%v", pattern, reflect.TypeOf(c), name, tags, routerinfo.funcParamTags)
+		this.app.Logger.Debug("pattern:%v, action:%v.%v, tags:%v  => formatedTags:%v", pattern, reflect.TypeOf(c), name, tags, routerinfo.funcParamTags)
 	}
 
 	this.add(methods, pattern, routerinfo)
@@ -431,7 +432,7 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 		Status(http.StatusMethodNotAllowed).
 		Exec()
 	if err != nil {
-		Logger.Critical("%v", err)
+		this.app.Logger.Critical("%v", err)
 		http.Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -441,7 +442,7 @@ func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, r
 		err := ctx.Input.Parse()
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF || strings.HasSuffix(err.Error(), io.EOF.Error()) {
-				Logger.Warn("client interrupt request, cause:%v", err)
+				this.app.Logger.Warn("client interrupt request, cause:%v", err)
 				return
 			} else {
 				panic(err)
@@ -486,18 +487,18 @@ func defaultRecoverFunc(ctx *Context) {
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
-			Logger.Info("%v", errtxt)
+			ctx.App.Logger.Info("%v", errtxt)
 		case Result:
 			errtxt = e.String()
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
-			Logger.Info("%v", errtxt)
+			ctx.App.Logger.Info("%v", errtxt)
 		default:
 			errtxt = "Internal Server Error"
 			code = http.StatusInternalServerError
 			errdata = fmt.Sprintf("%s, %v", errtxt, err)
-			Logger.Critical("%v", errdata)
+			ctx.App.Logger.Critical("%v", errdata)
 
 			if ctx.App.Config.PrintPanicDetail || ctx.App.Config.RunMode == DEV {
 				for i := 1; ; i += 1 {
@@ -505,7 +506,7 @@ func defaultRecoverFunc(ctx *Context) {
 					if !ok {
 						break
 					}
-					Logger.Error("%s, %d", file, line)
+					ctx.App.Logger.Error("%s, %d", file, line)
 				}
 			}
 		}
@@ -514,7 +515,7 @@ func defaultRecoverFunc(ctx *Context) {
 			Exec()
 
 		if err != nil {
-			Logger.Critical("%v", err)
+			ctx.App.Logger.Critical("%v", err)
 			http.Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 		}
 

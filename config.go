@@ -5,9 +5,7 @@ import (
 )
 
 type config struct {
-	HttpAddr string
-	HttpPort int
-	UseFcgi  bool
+	Listen listenConfig
 
 	//生产或开发模式，值：PROD, DEV
 	RunMode int8
@@ -15,10 +13,8 @@ type config struct {
 	//模板文件位置
 	TemplatePath string
 
-	//Maximum duration before timing out read of the request, 默认:0(不超时)
-	ReadTimeout time.Duration
-	//Maximum duration before timing out write of the response, 默认:0(不超时)
-	WriteTimeout time.Duration
+	//请求主体数据量大小限制
+	MaxRequestBodySize int
 
 	//是否自动分析请求参数，默认:true
 	AutoParseRequest bool
@@ -39,6 +35,17 @@ type config struct {
 	PrintPanicDetail bool
 
 	Render renderConfig
+}
+
+type listenConfig struct {
+	//listen addr, format: "[ip]:<port>", ":7086", "0.0.0.0:7086", "127.0.0.1:7086"
+	Addr         string
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	//并发连接的最大数目, 默认：defaultConcurrency
+	Concurrency int
+	// By default keep-alive connection lifetime is unlimited.
+	MaxKeepaliveDuration time.Duration
 }
 
 type renderConfig struct {
@@ -66,19 +73,22 @@ type renderConfig struct {
 
 func newConfig() *config {
 	cfg := &config{}
-	cfg.HttpAddr = "0.0.0.0"
-	cfg.HttpPort = 7086
+
 	cfg.RunMode = PROD
 	cfg.TemplatePath = ""
-	cfg.ReadTimeout = 0
-	cfg.WriteTimeout = 0
 
+	cfg.MaxRequestBodySize = defaultMaxRequestBodySize
 	cfg.AutoParseRequest = true
 	cfg.FormDomainModel = false
 	cfg.ThrowBindParamPanic = true
 
 	cfg.RecoverFunc = defaultRecoverFunc
 	cfg.PrintPanicDetail = true
+
+	cfg.Listen.Addr = "0.0.0.0:7086"
+	cfg.Listen.ReadTimeout = 0
+	cfg.Listen.WriteTimeout = 0
+	cfg.Listen.Concurrency = defaultConcurrency
 
 	cfg.Render.AutoParseFormat = false
 	cfg.Render.FormatParamName = "fmt"
@@ -102,3 +112,10 @@ const (
 	FORMAT_HTML = "html"
 	// other ...
 )
+
+// See app.Config.MaxRequestBodySize for details.
+const defaultMaxRequestBodySize = 4 * 1024 * 1024
+
+// defaultConcurrency is the maximum number of concurrent connections
+// the Server may serve by default (i.e. if app.Config.Listen.Concurrency isn't set).
+const defaultConcurrency = 256 * 1024
