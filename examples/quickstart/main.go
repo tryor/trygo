@@ -12,7 +12,7 @@ func main() {
 		ctx.Render("hello world")
 	})
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.HttpPort)
+	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
 	ssss.Run()
 
 }

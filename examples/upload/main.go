@@ -15,7 +15,7 @@ func main() {
 
 	ssss.SetStaticPath("/", "static/webcontent/")
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.HttpPort)
+	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
 	ssss.Run()
 
 }
@@ -25,31 +25,32 @@ type UploadController struct {
 }
 
 func (c *UploadController) Upload() {
-	for _, files := range c.Ctx.Request.MultipartForm.File {
+	mform := c.Ctx.Request.MultipartForm
+	for _, files := range mform.File {
 		for _, file := range files {
-			saveFile(file)
+			c.saveFile(file)
 		}
 	}
 	c.Ctx.Redirect(302, "/files")
 }
 
-func saveFile(fh *multipart.FileHeader) {
+func (c *UploadController) saveFile(fh *multipart.FileHeader) {
 	f, err := fh.Open()
 	if err != nil {
-		ssss.Logger.Error("%v", err)
+		c.App.Logger.Error("%v", err)
 		return
 	}
 	defer f.Close()
 
 	lf, err := os.Create(ssss.AppPath + "\\static\\webcontent\\files\\" + fh.Filename)
 	if err != nil {
-		ssss.Logger.Error("%v", err)
+		c.App.Logger.Error("%v", err)
 		return
 	}
 	defer lf.Close()
 	_, err = io.Copy(lf, f)
 	if err != nil {
-		ssss.Logger.Error("%v", err)
+		c.App.Logger.Error("%v", err)
 		return
 	}
 }

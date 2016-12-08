@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	//	"net/http"
 	"strconv"
 	"time"
 
@@ -60,7 +61,7 @@ func main() {
 	//设置静态文件根位置
 	ssss.SetStaticPath("/", "static/webcontent/")
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.HttpPort)
+	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
 	ssss.Run()
 
 }

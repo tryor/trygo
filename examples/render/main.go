@@ -135,7 +135,7 @@ func main() {
 	//ssss.DefaultApp.Config.Render.Gzip = true
 	//ssss.DefaultApp.Config.Render.Wrap = true
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.HttpPort)
+	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
 	ssss.Run()
 }
 
