@@ -35,7 +35,7 @@ func NewContext(rw http.ResponseWriter, r *http.Request, app *App) *Context {
 
 func (ctx *Context) Reset(rw http.ResponseWriter, r *http.Request, app *App) *Context {
 	if resp, ok := rw.(*response); ok {
-		ctx.ResponseWriter.ResponseWriter = resp.ResponseWriter
+		ctx.ResponseWriter = resp
 	} else {
 		ctx.ResponseWriter.ResponseWriter = rw
 	}
