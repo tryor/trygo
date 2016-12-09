@@ -2,6 +2,7 @@ package ssss
 
 import (
 	"fmt"
+	"net/http"
 	"runtime"
 	"strings"
 	"time"
@@ -61,6 +62,12 @@ func determine(skip int) string {
 	src := ""
 	if ok {
 		name := runtime.FuncForPC(pc).Name()
+		nameitems := strings.Split(name, ".")
+		if len(nameitems) > 2 {
+			nameitems = nameitems[len(nameitems)-2:]
+		}
+		name = strings.Join(nameitems, ".")
+
 		pathitems := strings.Split(file, "/")
 		if len(pathitems) > 2 {
 			pathitems = pathitems[len(pathitems)-2:]
@@ -69,4 +76,8 @@ func determine(skip int) string {
 		src = fmt.Sprintf("%s:%d(%s)", file, lineno, name)
 	}
 	return src
+}
+
+func buildLoginfo(r *http.Request, args ...interface{}) string {
+	return fmt.Sprintf("%v \"%s\"<->\"%s\": %s", r.URL.Path, r.Host, r.RemoteAddr, fmt.Sprint(args...))
 }

@@ -444,6 +444,8 @@ func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, r
 			if err == io.EOF || err == io.ErrUnexpectedEOF || strings.HasSuffix(err.Error(), io.EOF.Error()) {
 				this.app.Logger.Warn("client interrupt request, cause:%v", err)
 				return
+			} else if strings.Contains(err.Error(), ErrBodyTooLarge.Error()) {
+				panic(NewErrorResult(ERROR_CODE_RUNTIME, err))
 			} else {
 				panic(err)
 			}
@@ -487,19 +489,18 @@ func defaultRecoverFunc(ctx *Context) {
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
-			ctx.App.Logger.Info("%v", errtxt)
+			ctx.App.Logger.Info("%s", buildLoginfo(ctx.Request, errtxt))
 		case Result:
 			errtxt = e.String()
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
-			ctx.App.Logger.Info("%v", errtxt)
+			ctx.App.Logger.Info("%s", buildLoginfo(ctx.Request, errtxt))
 		default:
 			errtxt = "Internal Server Error"
 			code = http.StatusInternalServerError
 			errdata = fmt.Sprintf("%s, %v", errtxt, err)
-			ctx.App.Logger.Critical("%v", errdata)
-
+			ctx.App.Logger.Critical("%s", buildLoginfo(ctx.Request, errtxt))
 			if ctx.App.Config.PrintPanicDetail || ctx.App.Config.RunMode == DEV {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)
@@ -515,8 +516,8 @@ func defaultRecoverFunc(ctx *Context) {
 			Exec()
 
 		if err != nil {
-			ctx.App.Logger.Critical("%v", err)
-			http.Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+			ctx.App.Logger.Critical("%v \"%s\"<->\"%s\": %s", ctx.Request.URL.Path, ctx.Request.Host, ctx.Request.RemoteAddr, err.Error())
+			Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 		}
 
 	}

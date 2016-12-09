@@ -13,8 +13,8 @@ type config struct {
 	//模板文件位置
 	TemplatePath string
 
-	//请求主体数据量大小限制
-	MaxRequestBodySize int
+	//请求主体数据量大小限制, 默认：defaultMaxRequestBodySize
+	MaxRequestBodySize int64
 
 	//是否自动分析请求参数，默认:true
 	AutoParseRequest bool
@@ -44,7 +44,7 @@ type listenConfig struct {
 	WriteTimeout time.Duration
 	//并发连接的最大数目, 默认：defaultConcurrency
 	Concurrency int
-	// By default keep-alive connection lifetime is unlimited.
+	//连接Keep-Alive时间限制， 默认3分钟
 	MaxKeepaliveDuration time.Duration
 }
 
@@ -89,6 +89,7 @@ func newConfig() *config {
 	cfg.Listen.ReadTimeout = 0
 	cfg.Listen.WriteTimeout = 0
 	cfg.Listen.Concurrency = defaultConcurrency
+	cfg.Listen.MaxKeepaliveDuration = 3 * time.Minute
 
 	cfg.Render.AutoParseFormat = false
 	cfg.Render.FormatParamName = "fmt"

@@ -20,13 +20,19 @@ type HttpServeListener interface {
 
 //Default
 type DefaultHttpServeListener struct {
+	http.Server
 	Network string
 }
 
 func (hsl *DefaultHttpServeListener) ListenAndServe(app *App, addr string, handler http.Handler) error {
-	server := &http.Server{Addr: addr, Handler: handler, ReadTimeout: app.Config.Listen.ReadTimeout, WriteTimeout: app.Config.Listen.WriteTimeout}
+	//server := &http.Server{ReadTimeout: app.Config.Listen.ReadTimeout, WriteTimeout: app.Config.Listen.WriteTimeout}
+	hsl.ReadTimeout = app.Config.Listen.ReadTimeout
+	hsl.WriteTimeout = app.Config.Listen.WriteTimeout
+	hsl.Addr = addr
+	hsl.Handler = FilterHandler(app, handler)
+
 	if w, ok := app.Logger.(io.Writer); ok {
-		server.ErrorLog = log.New(w, "[HTTP]", 0)
+		hsl.ErrorLog = log.New(w, "[HTTP]", 0)
 	}
 	if hsl.Network == "" {
 		hsl.Network = "tcp"
@@ -35,18 +41,26 @@ func (hsl *DefaultHttpServeListener) ListenAndServe(app *App, addr string, handl
 	if err != nil {
 		return err
 	}
-	return server.Serve(FilterListener(app, l))
+	return hsl.Serve(FilterListener(app, l))
 }
 
 //TLS
 type TLSHttpServeListener struct {
+	http.Server
 	CertFile, KeyFile string
 }
 
 func (hsl *TLSHttpServeListener) ListenAndServe(app *App, addr string, handler http.Handler) error {
-	server := &http.Server{Addr: addr, Handler: handler, ReadTimeout: app.Config.Listen.ReadTimeout, WriteTimeout: app.Config.Listen.WriteTimeout}
+	//	server := &http.Server{ReadTimeout: app.Config.Listen.ReadTimeout, WriteTimeout: app.Config.Listen.WriteTimeout}
+	//	server.Addr = addr
+	//	server.Handler = FilterHandler(app, handler)
+	hsl.ReadTimeout = app.Config.Listen.ReadTimeout
+	hsl.WriteTimeout = app.Config.Listen.WriteTimeout
+	hsl.Addr = addr
+	hsl.Handler = FilterHandler(app, handler)
+
 	if w, ok := app.Logger.(io.Writer); ok {
-		server.ErrorLog = log.New(w, "[HTTPS]", 0)
+		hsl.ErrorLog = log.New(w, "[HTTPS]", 0)
 	}
 
 	config, err := hsl.tlsConfig()
@@ -59,7 +73,7 @@ func (hsl *TLSHttpServeListener) ListenAndServe(app *App, addr string, handler h
 		return err
 	}
 	tlsListener := tls.NewListener(FilterListener(app, l), config)
-	return server.Serve(tlsListener)
+	return hsl.Serve(tlsListener)
 }
 
 func strSliceContains(ss []string, s string) bool {
@@ -97,6 +111,8 @@ type FcgiHttpServeListener struct {
 func (hsl *FcgiHttpServeListener) ListenAndServe(app *App, addr string, handler http.Handler) error {
 	var err error
 	var l net.Listener
+	handler = FilterHandler(app, handler)
+
 	if hsl.EnableStdIo {
 		if err = fcgi.Serve(nil, handler); err == nil {
 			app.Logger.Info("Use FCGI via standard I/O")

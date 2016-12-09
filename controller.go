@@ -76,8 +76,8 @@ func (c *Controller) Redirect(url string, code int) {
 	c.Ctx.Redirect(code, url)
 }
 
-func (c *Controller) Error(code int, message string) {
-	c.Ctx.ResponseWriter.Error(code, message)
+func (c *Controller) Error(message string, code int) {
+	c.Ctx.ResponseWriter.Error(message, code)
 }
 
 func (c *Controller) Render(data ...interface{}) *render {

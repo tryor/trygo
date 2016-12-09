@@ -29,9 +29,18 @@ func newResponse(ctx *Context) *response {
 	return rw
 }
 
-func (this *response) Error(code int, message string) (err error) {
-	this.ResponseWriter.WriteHeader(code)
-	_, err = this.ResponseWriter.Write([]byte(message))
+func Error(rw http.ResponseWriter, message string, code int) {
+	rw.Header().Set("Connection", "close")
+	http.Error(rw, message, code)
+	if f, ok := rw.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (this *response) Error(message string, code int) {
+	//this.ResponseWriter.WriteHeader(code)
+	//_, err = this.ResponseWriter.Write([]byte(message))
+	Error(this, message, code)
 	return
 }
 
@@ -286,6 +295,10 @@ func (this *render) Data(data interface{}) *render {
 }
 
 func (this *render) Reset() {
+	if !this.started {
+		return
+	}
+
 	this.contentType = ""
 	this.data = nil
 	this.format = ""
