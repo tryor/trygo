@@ -6,11 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	//	"trygo/fasthttp-ssss-bridging"
-	//	"trygo/ssss"
-	"github.com/trygo/fasthttp-ssss-bridging"
+	//"github.com/trygo/fasthttp-ssss-bridging"
 	"github.com/trygo/ssss"
-	//	"github.com/valyala/fasthttp"
 )
 
 /**
@@ -19,12 +16,12 @@ import (
 
 func main() {
 
-	go ListenAndServe(9080)                                                                               //Default http
-	go ListenAndServe(9081, &ssss.DefaultHttpServeListener{"tcp4"})                                       //Default http, tcp4
-	go ListenAndServe(7086, &ssss.FcgiHttpServeListener{})                                                //Fcgi
-	go ListenAndServe(4433, &ssss.TLSHttpServeListener{"cert.pem", "key.pem"})                            //Https
-	go ListenAndServe(9090, &bridging.FasthttpServeListener{})                                            //FastHttp
-	go ListenAndServe(4439, &bridging.TLSFasthttpServeListener{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
+	go ListenAndServe(9080)                                                    //Default http
+	go ListenAndServe(9081, &ssss.DefaultHttpServeListener{"tcp4"})            //Default http, tcp4
+	go ListenAndServe(7086, &ssss.FcgiHttpServeListener{})                     //Fcgi
+	go ListenAndServe(4433, &ssss.TLSHttpServeListener{"cert.pem", "key.pem"}) //Https
+	//go ListenAndServe(9090, &bridging.FasthttpServeListener{})                                            //FastHttp
+	//go ListenAndServe(4439, &bridging.TLSFasthttpServeListener{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
 	select {}
 
 }
