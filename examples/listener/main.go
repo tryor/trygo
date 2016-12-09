@@ -7,10 +7,10 @@ import (
 	"time"
 
 	//	"github.com/trygo/fasthttp-ssss-bridging"
-	//	"github.com/trygo/ssss"
+	"github.com/trygo/ssss"
 
 	//	"trygo/fasthttp-ssss-bridging"
-	"trygo/ssss"
+	//	"trygo/ssss"
 )
 
 /**
