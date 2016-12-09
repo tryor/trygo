@@ -23,6 +23,7 @@ type HttpServer struct {
 }
 
 func (hsl *HttpServer) ListenAndServe(app *App) error {
+	app.Prepare()
 	hsl.ReadTimeout = app.Config.Listen.ReadTimeout
 	hsl.WriteTimeout = app.Config.Listen.WriteTimeout
 	hsl.Addr = app.Config.Listen.Addr
@@ -48,6 +49,7 @@ type TLSHttpServer struct {
 }
 
 func (hsl *TLSHttpServer) ListenAndServe(app *App) error {
+	app.Prepare()
 	hsl.ReadTimeout = app.Config.Listen.ReadTimeout
 	hsl.WriteTimeout = app.Config.Listen.WriteTimeout
 	hsl.Addr = app.Config.Listen.Addr
@@ -103,6 +105,7 @@ type FcgiHttpServer struct {
 }
 
 func (hsl *FcgiHttpServer) ListenAndServe(app *App) error {
+	app.Prepare()
 	var err error
 	var l net.Listener
 	handler := FilterHandler(app, app.Handlers)

@@ -122,8 +122,11 @@ func (app *App) buildTemplate() {
 	}
 }
 
-func (app *App) Run(server ...Server) {
+func (app *App) Prepare() {
 	app.buildTemplate()
+}
+
+func (app *App) Run(server ...Server) {
 	var err error
 	var s Server
 	if len(server) > 0 {
