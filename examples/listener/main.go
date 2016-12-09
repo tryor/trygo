@@ -7,10 +7,10 @@ import (
 	"time"
 
 	//	"github.com/trygo/fasthttp-ssss-bridging"
-	"github.com/trygo/ssss"
+	//	"github.com/trygo/ssss"
 
 	//	"trygo/fasthttp-ssss-bridging"
-	//	"trygo/ssss"
+	"trygo/ssss"
 )
 
 /**
@@ -19,17 +19,17 @@ import (
 
 func main() {
 
-	go ListenAndServe(9080)                                                                       //Default http
-	go ListenAndServe(9081, &ssss.DefaultHttpServeListener{Network: "tcp4"})                      //Default http, tcp4
-	go ListenAndServe(7086, &ssss.FcgiHttpServeListener{})                                        //Fcgi
-	go ListenAndServe(4433, &ssss.TLSHttpServeListener{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
-	//	go ListenAndServe(9090, &bridging.FasthttpServeListener{})                 //FastHttp
-	//go ListenAndServe(4439, &bridging.TLSFasthttpServeListener{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
+	go ListenAndServe(9080)                                                                //Default http
+	go ListenAndServe(9081, &ssss.HttpServer{Network: "tcp4"})                             //Default http, tcp4
+	go ListenAndServe(7086, &ssss.FcgiHttpServer{})                                        //Fcgi
+	go ListenAndServe(4433, &ssss.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
+	//	go ListenAndServe(9090, &bridging.FasthttpServer{})                 //FastHttp
+	//go ListenAndServe(4439, &bridging.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
 	select {}
 
 }
 
-func ListenAndServe(port int, listener ...ssss.HttpServeListener) {
+func ListenAndServe(port int, server ...ssss.Server) {
 	app := ssss.NewApp()
 	app.Config.Listen.Addr = fmt.Sprintf("0.0.0.0:%v", port)
 	//app.Config.Listen.Concurrency = 10
@@ -97,5 +97,5 @@ func ListenAndServe(port int, listener ...ssss.HttpServeListener) {
 	app.SetStaticPath("/", "static/webcontent/")
 
 	fmt.Println("ListenAndServe AT ", port)
-	app.Run(listener...)
+	app.Run(server...)
 }

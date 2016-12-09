@@ -122,18 +122,18 @@ func (app *App) buildTemplate() {
 	}
 }
 
-func (app *App) Run(listener ...HttpServeListener) {
+func (app *App) Run(server ...Server) {
 	app.buildTemplate()
 	var err error
-	var hsl HttpServeListener
-	if len(listener) > 0 {
-		hsl = listener[0]
+	var s Server
+	if len(server) > 0 {
+		s = server[0]
 	} else {
-		hsl = &DefaultHttpServeListener{}
+		s = &HttpServer{}
 	}
 
-	if err = hsl.ListenAndServe(app, app.Config.Listen.Addr, app.Handlers); err != nil {
-		app.Logger.Critical("%v.ListenAndServe: %v", reflect.TypeOf(hsl), err)
+	if err = s.ListenAndServe(app); err != nil {
+		app.Logger.Critical("%v.ListenAndServe: %v", reflect.TypeOf(s), err)
 	}
 
 }

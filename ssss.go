@@ -95,6 +95,6 @@ func AddTemplateFunc(key string, funname interface{}) error {
 	return DefaultApp.TemplateRegister.AddFuncMap(key, funname)
 }
 
-func Run(listener ...HttpServeListener) {
-	DefaultApp.Run(listener...)
+func Run(server ...Server) {
+	DefaultApp.Run(server...)
 }
