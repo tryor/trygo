@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 import (
 	"crypto/tls"

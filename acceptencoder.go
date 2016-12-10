@@ -1,6 +1,6 @@
 //Initial code source, @see https://github.com/astaxie/beego/blob/master/context/acceptencoder.go
 
-package ssss
+package trygo
 
 import (
 	"bytes"

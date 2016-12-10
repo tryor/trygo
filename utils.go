@@ -1,13 +1,12 @@
-package ssss
+package trygo
 
 import (
 	"errors"
 	"fmt"
-	"os"
-	//	"fmt"
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"

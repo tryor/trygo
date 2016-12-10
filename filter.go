@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 import (
 	"errors"
@@ -22,11 +22,11 @@ type bodyLimitHandler struct {
 var ErrBodyTooLarge = errors.New("http: request body too large")
 
 func (h *bodyLimitHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	//	if r.ContentLength > h.app.Config.MaxRequestBodySize {
-	//		h.app.Logger.Info("%s", buildLoginfo(r, ErrBodyTooLarge))
-	//		Error(rw, ErrBodyTooLarge.Error(), http.StatusRequestEntityTooLarge)
-	//		return
-	//	}
+	if r.ContentLength > h.app.Config.MaxRequestBodySize {
+		h.app.Logger.Info("%s", buildLoginfo(r, ErrBodyTooLarge))
+		Error(rw, ErrBodyTooLarge.Error(), http.StatusRequestEntityTooLarge)
+		return
+	}
 	if r.Body != nil {
 		r.Body = http.MaxBytesReader(rw, r.Body, h.app.Config.MaxRequestBodySize)
 	}

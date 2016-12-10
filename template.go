@@ -1,6 +1,6 @@
 //Initial code source, @see https://github.com/astaxie/beego/blob/master/template.go
 
-package ssss
+package trygo
 
 import (
 	"errors"

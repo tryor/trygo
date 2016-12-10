@@ -1,21 +1,21 @@
-## SSSS
+## trygo
 =======
-SSSS 是基于Golang的http、web服务框架。此框架的目标并不是想做一个大而全的web服务容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：RESTful,MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML结果响应支持，模板，静态文件输出。暂时不支持会话管理模块。
+trygo 是基于Golang的http、web服务框架。此框架的目标并不是想做一个大而全的web服务容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：RESTful,MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML结果响应支持，模板，静态文件输出。暂时不支持会话管理模块。
 
-ssss HTTP and WEB services of framework for Golang. It is mainly used to develop the underlying HTTP service, Support feature:RESTful,MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML result response support,template,Static file output。Temporarily does not support session management module。
+trygo HTTP and WEB services of framework for Golang. It is mainly used to develop the underlying HTTP service, Support feature:RESTful,MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML result response support,template,Static file output。Temporarily does not support session management module。
 
-ssss is licensed under the Apache Licence, Version 2.0
+trygo is licensed under the Apache Licence, Version 2.0
 (http://www.apache.org/licenses/LICENSE-2.0.html).
 
 ## Installation
 ============
 To install:
 
-    go get -u github.com/trygo/ssss
+    go get -u github.com/tryor/trygo
 
 ## Quick Start
 ============
-Here is the canonical "Hello, world" example app for ssss:
+Here is the canonical "Hello, world" example app for trygo:
 
 ```go
 package main
@@ -23,42 +23,42 @@ package main
 import (
 	"fmt"
 
-	"github.com/trygo/ssss"
+	"github.com/tryor/trygo"
 )
 
 func main() {
 
-	ssss.Get("/", func(ctx *ssss.Context) {
+	trygo.Get("/", func(ctx *trygo.Context) {
 		ctx.Render("hello world")
 	})
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.HttpPort)
-	ssss.Run()
+	fmt.Println("HTTP ListenAndServe AT ", trygo.DefaultApp.Config.HttpPort)
+	trygo.Run()
 
 }
 ```
-A better understanding of the SSSS example:
+A better understanding of the trygo example:
 
 
-@see (https://github.com/trygo/ssss/tree/master/examples)
+@see (https://github.com/tryor/trygo/tree/master/examples)
 
 
 ## Router
 ============
 ```go
 
-ssss.Register(method string, path string, c IController, name string, params ...string)
-ssss.RegisterHandler(pattern string, h http.Handler)
-ssss.RegisterRESTful(pattern string, c IController)
-ssss.RegisterFunc(methods, pattern string, f HandlerFunc)
-ssss.Get(pattern string, f HandlerFunc)
-ssss.Post(pattern string, f HandlerFunc) 
-ssss.Put(pattern string, f HandlerFunc)
+trygo.Register(method string, path string, c IController, name string, params ...string)
+trygo.RegisterHandler(pattern string, h http.Handler)
+trygo.RegisterRESTful(pattern string, c IController)
+trygo.RegisterFunc(methods, pattern string, f HandlerFunc)
+trygo.Get(pattern string, f HandlerFunc)
+trygo.Post(pattern string, f HandlerFunc) 
+trygo.Put(pattern string, f HandlerFunc)
  ...
  ```
 
 for example： 
-@see (https://github.com/trygo/ssss/tree/master/examples/router)
+@see (https://github.com/tryor/trygo/tree/master/examples/router)
 
 
 
@@ -83,17 +83,17 @@ type UserForm struct {
 
 
 type MainController struct {
-	ssss.Controller
+	trygo.Controller
 }
 func (this *MainController) Create(userform UserForm) {
-	ssss.Logger.Info("user=%v", user)
+	trygo.Logger.Info("user=%v", user)
 	//...
 	user := service.UserService.Create(userform)
 	//...
 	this.Render(user)
 }
 
-ssss.Register("GET|POST", "/user/create", &MainController{}, "Create(userform UserForm)")
+trygo.Register("GET|POST", "/user/create", &MainController{}, "Create(userform UserForm)")
 
 
 
@@ -117,7 +117,7 @@ func (this *MainController) Login(account, pwd string) {
 }
 
 
-ssss.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
+trygo.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
 
 
 ```
@@ -127,12 +127,12 @@ ssss.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd 
 All the default render:
 
 
-@see (https://github.com/trygo/ssss/tree/master/examples/render)
+@see (https://github.com/tryor/trygo/tree/master/examples/render)
 
 
 ## Static files
 ============
-ssss.SetStaticPath("/", "static/webroot/")
+trygo.SetStaticPath("/", "static/webroot/")
 
 
 ## View / Template
@@ -141,15 +141,15 @@ ssss.SetStaticPath("/", "static/webroot/")
 template view path set
 
 ```go
-ssss.SetViewsPath("static/templates/")
+trygo.SetViewsPath("static/templates/")
 ```
 template names
 
-ssss will find the template from cfg.TemplatePath. the file is set by user like：
+trygo will find the template from cfg.TemplatePath. the file is set by user like：
 ```go
 c.TplNames = "admin/add.tpl"
 ```
-then ssss will find the file in the path:static/templates/admin/add.tpl
+then trygo will find the file in the path:static/templates/admin/add.tpl
 
 if you don't set TplNames,sss will find like this:
 ```go
@@ -169,9 +169,7 @@ c.RenderTemplate()
 ```go
 
 type config struct {
-	HttpAddr string
-	HttpPort int
-	UseFcgi  bool
+	Listen listenConfig
 
 	//生产或开发模式，值：PROD, DEV
 	RunMode int8
@@ -179,10 +177,11 @@ type config struct {
 	//模板文件位置
 	TemplatePath string
 
-	//Maximum duration before timing out read of the request, 默认:0(不超时)
-	ReadTimeout time.Duration
-	//Maximum duration before timing out write of the response, 默认:0(不超时)
-	WriteTimeout time.Duration
+	//请求主体数据量大小限制, 默认：defaultMaxRequestBodySize
+	MaxRequestBodySize int64
+
+	//是否自动分析请求参数，默认:true
+	AutoParseRequest bool
 
 	//如果使用结构体来接收请求参数，可在此设置是否采用域模式传递参数, 默认:false
 	//如果值为true, 需要这样传递请求参数：user.account, user为方法参数名(为结构类型)，account为user结构字段名
@@ -200,6 +199,17 @@ type config struct {
 	PrintPanicDetail bool
 
 	Render renderConfig
+}
+
+type listenConfig struct {
+	//listen addr, format: "[ip]:<port>", ":7086", "0.0.0.0:7086", "127.0.0.1:7086"
+	Addr         string
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	//并发连接的最大数目, 默认：defaultConcurrency
+	Concurrency int
+	//连接Keep-Alive时间限制， 默认0, 无限制
+	MaxKeepaliveDuration time.Duration
 }
 
 type renderConfig struct {
@@ -227,18 +237,23 @@ type renderConfig struct {
 
 func newConfig() *config {
 	cfg := &config{}
-	cfg.HttpAddr = "0.0.0.0"
-	cfg.HttpPort = 7086
+
 	cfg.RunMode = PROD
 	cfg.TemplatePath = ""
-	cfg.ReadTimeout = 0
-	cfg.WriteTimeout = 0
 
+	cfg.MaxRequestBodySize = defaultMaxRequestBodySize
+	cfg.AutoParseRequest = true
 	cfg.FormDomainModel = false
 	cfg.ThrowBindParamPanic = true
 
 	cfg.RecoverFunc = defaultRecoverFunc
 	cfg.PrintPanicDetail = true
+
+	cfg.Listen.Addr = "0.0.0.0:7086"
+	cfg.Listen.ReadTimeout = 0
+	cfg.Listen.WriteTimeout = 0
+	cfg.Listen.Concurrency = defaultConcurrency
+	cfg.Listen.MaxKeepaliveDuration = 0
 
 	cfg.Render.AutoParseFormat = false
 	cfg.Render.FormatParamName = "fmt"
@@ -262,6 +277,10 @@ const (
 	FORMAT_HTML = "html"
 	// other ...
 )
+
+const defaultMaxRequestBodySize = 4 * 1024 * 1024
+
+const defaultConcurrency = 256 * 1024
 
 ```
 

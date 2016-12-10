@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 const (
 	ERROR_CODE_OK                            = 0

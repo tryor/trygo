@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 var mimemaps = map[string]string{
 	".3dm":         "x-world/x-3dmf",

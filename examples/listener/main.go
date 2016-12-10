@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	//	"github.com/trygo/fasthttp-ssss-bridging"
-	//	"github.com/trygo/ssss"
+	"github.com/tryor/fasthttp-trygo-bridging"
+	"github.com/tryor/trygo"
 
-	//	"trygo/fasthttp-ssss-bridging"
-	"trygo/ssss"
+	//	"tryor/fasthttp-trygo-bridging"
+	//	"tryor/trygo"
 )
 
 /**

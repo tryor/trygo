@@ -1,10 +1,8 @@
-package ssss
+package trygo
 
 import (
 	"net/http"
 )
-
-//	"net/url"
 
 type IController interface {
 	Init(app *App, ctx *Context, controllerName, methodName string)

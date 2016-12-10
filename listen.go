@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 import (
 	"net"
@@ -7,16 +7,16 @@ import (
 )
 
 func FilterListener(app *App, l net.Listener) net.Listener {
-	l = TcpKeepAliveListener(l, app.Config.Listen.MaxKeepaliveDuration)
-	l = LimitListener(l, app.Config.Listen.Concurrency)
+	l = TcpKeepAliveListener(app, l, app.Config.Listen.MaxKeepaliveDuration)
+	l = LimitListener(app, l, app.Config.Listen.Concurrency)
 	return l
 }
 
-func TcpKeepAliveListener(l net.Listener, keepalivePeriod time.Duration) net.Listener {
+func TcpKeepAliveListener(app *App, l net.Listener, keepalivePeriod time.Duration) net.Listener {
 	if tc, ok := l.(*net.TCPListener); ok {
 		return &tcpKeepAliveListener{tc, keepalivePeriod}
 	}
-	DefaultApp.Logger.Warn("Listen: Listener not is *net.TCPListener, %v", l.Addr())
+	app.Logger.Warn("Listen: Listener not is *net.TCPListener, %v", l.Addr())
 	return l
 }
 
@@ -37,7 +37,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
-func LimitListener(l net.Listener, n int) net.Listener {
+func LimitListener(app *App, l net.Listener, n int) net.Listener {
 	return &limitListener{l, make(chan struct{}, n)}
 }
 

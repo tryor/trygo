@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 import (
 	"net/http"
@@ -23,7 +23,7 @@ func NewApp() *App {
 		TemplateRegister: NewTemplateRegister(nil),
 		Config:           newConfig(),
 		StaticDirs:       make(map[string]string),
-		Logger:           &defaultLogger{}}
+		Logger:           logger}
 
 	app.Handlers.app = app
 	app.TemplateRegister.app = app

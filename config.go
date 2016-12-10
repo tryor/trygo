@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 import (
 	"time"
@@ -114,9 +114,6 @@ const (
 	// other ...
 )
 
-// See app.Config.MaxRequestBodySize for details.
 const defaultMaxRequestBodySize = 4 * 1024 * 1024
 
-// defaultConcurrency is the maximum number of concurrent connections
-// the Server may serve by default (i.e. if app.Config.Listen.Concurrency isn't set).
 const defaultConcurrency = 256 * 1024

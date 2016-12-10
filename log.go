@@ -1,4 +1,4 @@
-package ssss
+package trygo
 
 import (
 	"fmt"
@@ -14,6 +14,16 @@ type Logger interface {
 	Warn(format string, args ...interface{})
 	Error(format string, args ...interface{})
 	Critical(format string, args ...interface{})
+}
+
+var logger Logger
+
+func init() {
+	SetLogger(&defaultLogger{})
+}
+
+func SetLogger(l Logger) {
+	logger = l
 }
 
 type defaultLogger struct{}
