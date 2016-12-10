@@ -13,6 +13,8 @@ type App struct {
 	StaticDirs       map[string]string
 	TemplateRegister *TemplateRegister
 	Logger           Logger
+
+	prepared bool
 }
 
 func NewApp() *App {
@@ -123,6 +125,10 @@ func (app *App) buildTemplate() {
 }
 
 func (app *App) Prepare() {
+	if app.prepared {
+		return
+	}
+	app.prepared = true
 	app.buildTemplate()
 }
 
@@ -134,7 +140,7 @@ func (app *App) Run(server ...Server) {
 	} else {
 		s = &HttpServer{}
 	}
-
+	app.Prepare()
 	if err = s.ListenAndServe(app); err != nil {
 		app.Logger.Critical("%v.ListenAndServe: %v", reflect.TypeOf(s), err)
 	}
