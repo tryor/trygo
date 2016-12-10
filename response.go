@@ -157,7 +157,7 @@ func (this *render) Wrap(code ...int) *render {
 	return this
 }
 
-func (this *render) Nowrap(b ...bool) *render {
+func (this *render) Nowrap() *render {
 	this.noWrap = true
 	return this
 }
@@ -220,6 +220,14 @@ func (this *render) Header(key string, value ...interface{}) *render {
 func (this *render) Cookie(c *http.Cookie) *render {
 	this.rw.AddCookie(c)
 	return this
+}
+
+func (this *render) KeepAlive(b bool) {
+	if b {
+		this.rw.Header().Set("Connection", "keep-alive")
+	} else {
+		this.rw.Header().Set("Connection", "close")
+	}
 }
 
 func (this *render) File(filename string) *render {

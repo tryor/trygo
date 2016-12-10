@@ -3,11 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
-	//	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/trygo/ssss"
+	"github.com/tryor/trygo"
 )
 
 /**
@@ -16,67 +15,67 @@ import (
 
 func main() {
 	//router, get
-	ssss.Get("/router/get", func(ctx *ssss.Context) {
+	trygo.Get("/router/get", func(ctx *trygo.Context) {
 		p1 := ctx.Input.GetValue("p1")
 		p2 := ctx.Input.GetValue("p2")
 		ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
 	})
 
 	//router, post
-	ssss.Post("/router/post", func(ctx *ssss.Context) {
+	trygo.Post("/router/post", func(ctx *trygo.Context) {
 		p1 := ctx.Input.GetValue("p1")
 		p2 := ctx.Input.GetValue("p2")
 		ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
 	})
 
 	//router, func
-	ssss.RegisterFunc("post|get|put", "/router/func", func(ctx *ssss.Context) {
+	trygo.RegisterFunc("post|get|put", "/router/func", func(ctx *trygo.Context) {
 		p1 := ctx.Input.GetValue("p1")
 		p2 := ctx.Input.GetValue("p2")
 		ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
 	})
 
 	//router, http.Handler
-	ssss.RegisterHandler("/router/handler", &Handler{})
+	trygo.RegisterHandler("/router/handler", &Handler{})
 
 	//router, RESTful
-	ssss.RegisterRESTful("/router/restful", &RESTfulController{})
+	trygo.RegisterRESTful("/router/restful", &RESTfulController{})
 
-	//router, ssss normal
-	ssss.Register("post", "/router/user/create", &UserController{}, "Create")
-	ssss.Register("get", "/router/user/get", &UserController{}, "GetUser")
+	//router, trygo normal
+	trygo.Register("post", "/router/user/create", &UserController{}, "Create")
+	trygo.Register("get", "/router/user/get", &UserController{}, "GetUser")
 
 	//router, regexp pattern
-	ssss.Register("*", "/router/user/query/(?P<pno>[^/]+)?/(?P<psize>[^/]+)?/(?P<orderby>[^/]+)?$", &UserController{}, "Query")
+	trygo.Register("*", "/router/user/query/(?P<pno>[^/]+)?/(?P<psize>[^/]+)?/(?P<orderby>[^/]+)?$", &UserController{}, "Query")
 
 	//router, bind parameters
-	ssss.Register("post", "/router/user/login", &UserController{}, "Login(account, pwd string, devid int)")
+	trygo.Register("post", "/router/user/login", &UserController{}, "Login(account, pwd string, devid int)")
 
 	//router, bind parameters and set qualifier tag
-	ssss.Register("post", "/router/user/login2", &UserController{}, "Login(account, pwd string, devid int)", "account,limit:20,require", "pwd,limit:20,require", "devid,scope:[1 2 3 4],default:1")
+	trygo.Register("post", "/router/user/login2", &UserController{}, "Login(account, pwd string, devid int)", "account,limit:20,require", "pwd,limit:20,require", "devid,scope:[1 2 3 4],default:1")
 
 	//router, bind struct parameters and set qualifier tag in struct
-	ssss.Register("post", "/router/user/edit", &UserController{}, "Edit(user User)")
+	trygo.Register("post", "/router/user/edit", &UserController{}, "Edit(user User)")
 
 	//设置静态文件根位置
-	ssss.SetStaticPath("/", "static/webcontent/")
+	trygo.SetStaticPath("/", "static/webcontent/")
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
-	ssss.Run()
+	fmt.Println("HTTP ListenAndServe AT ", trygo.DefaultApp.Config.Listen.Addr)
+	trygo.Run()
 
 }
 
 type Handler struct{}
 
 func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	ctx := ssss.NewContext(rw, r, ssss.DefaultApp)
+	ctx := trygo.NewContext(rw, r, trygo.DefaultApp)
 	p1 := ctx.Input.GetValue("p1")
 	p2 := ctx.Input.GetValue("p2")
 	ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
 }
 
 type RESTfulController struct {
-	ssss.Controller
+	trygo.Controller
 }
 
 func (c *RESTfulController) Get() {
@@ -85,7 +84,7 @@ func (c *RESTfulController) Get() {
 }
 
 type UserController struct {
-	ssss.Controller
+	trygo.Controller
 }
 
 func (c *UserController) Login(account, pwd string, devid int) {

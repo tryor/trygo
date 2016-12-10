@@ -10,18 +10,19 @@ import (
 )
 
 func main() {
+	trygo.DefaultApp.Config.MaxRequestBodySize = 1024 * 1024 * 20
 
-	ssss.Register("post", "/upload", &UploadController{}, "Upload")
+	trygo.Register("post", "/upload", &UploadController{}, "Upload")
 
-	ssss.SetStaticPath("/", "static/webcontent/")
+	trygo.SetStaticPath("/", "static/webcontent/")
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
-	ssss.Run()
+	fmt.Println("HTTP ListenAndServe AT ", trygo.DefaultApp.Config.Listen.Addr)
+	trygo.Run()
 
 }
 
 type UploadController struct {
-	ssss.Controller
+	trygo.Controller
 }
 
 func (c *UploadController) Upload() {
@@ -42,7 +43,7 @@ func (c *UploadController) saveFile(fh *multipart.FileHeader) {
 	}
 	defer f.Close()
 
-	lf, err := os.Create(ssss.AppPath + "\\static\\webcontent\\files\\" + fh.Filename)
+	lf, err := os.Create(trygo.AppPath + "\\static\\webcontent\\files\\" + fh.Filename)
 	if err != nil {
 		c.App.Logger.Error("%v", err)
 		return

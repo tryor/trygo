@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tryor/fasthttp-trygo-bridging"
+	//"github.com/tryor/fasthttp-trygo-bridging"
 	"github.com/tryor/trygo"
 
 	//	"tryor/fasthttp-trygo-bridging"
@@ -19,24 +19,24 @@ import (
 
 func main() {
 
-	go ListenAndServe(9080)                                                                //Default http
-	go ListenAndServe(9081, &ssss.HttpServer{Network: "tcp4"})                             //Default http, tcp4
-	go ListenAndServe(7086, &ssss.FcgiHttpServer{})                                        //Fcgi
-	go ListenAndServe(4433, &ssss.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
+	go ListenAndServe(9080)                                                                 //Default http
+	go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"})                             //Default http, tcp4
+	go ListenAndServe(7086, &trygo.FcgiHttpServer{})                                        //Fcgi
+	go ListenAndServe(4433, &trygo.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
 	//	go ListenAndServe(9090, &bridging.FasthttpServer{})                 //FastHttp
 	//go ListenAndServe(4439, &bridging.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
 	select {}
 
 }
 
-func ListenAndServe(port int, server ...ssss.Server) {
-	app := ssss.NewApp()
+func ListenAndServe(port int, server ...trygo.Server) {
+	app := trygo.NewApp()
 	app.Config.Listen.Addr = fmt.Sprintf("0.0.0.0:%v", port)
 	//app.Config.Listen.Concurrency = 10
 	//app.Config.MaxRequestBodySize = 1024 * 1024 * 8
 	//app.Config.AutoParseRequest = false
 
-	app.Post("/reqinfo", func(ctx *ssss.Context) {
+	app.Post("/reqinfo", func(ctx *trygo.Context) {
 		reqinfo := ""
 		req := ctx.Request
 
@@ -54,7 +54,7 @@ func ListenAndServe(port int, server ...ssss.Server) {
 		reqinfo += fmt.Sprintf("req.Closed() => %v\n", req.Close)
 		reqinfo += fmt.Sprintf("req.ContentLength() => %v\n", req.ContentLength)
 		reqinfo += fmt.Sprintf("req.Header().Get() Content-Type => %v\n", req.Header.Get("Content-Type"))
-		ck, err := req.Cookie("ckname11")
+		ck, err := req.Cookie("Cookie2")
 		reqinfo += fmt.Sprintf("req.Cookie() => %v, err:%v\n", ck, err)
 		reqinfo += fmt.Sprintf("req.Cookies() => %v\n", req.Cookies())
 
@@ -90,8 +90,8 @@ func ListenAndServe(port int, server ...ssss.Server) {
 			}
 		}
 		ctx.Render(reqinfo).
-			Cookie(&http.Cookie{Name: "ckame211", Value: "ckval211", Domain: "127.0.0.1", MaxAge: 100, Expires: time.Now().Add(100 * time.Second), HttpOnly: true}).
-			Cookie(&http.Cookie{Name: "ckname22", Value: "ckval22"})
+			Cookie(&http.Cookie{Name: "Cookie1", Value: "1", Domain: "127.0.0.1", MaxAge: 100, Expires: time.Now().Add(100 * time.Second), HttpOnly: true}).
+			Cookie(&http.Cookie{Name: "Cookie2", Value: "2"})
 	})
 
 	app.SetStaticPath("/", "static/webcontent/")

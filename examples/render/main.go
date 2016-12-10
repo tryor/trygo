@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trygo/ssss"
+	"github.com/tryor/trygo"
 )
 
 /**
@@ -15,39 +15,39 @@ import (
 
 func main() {
 	//render text
-	ssss.Get("/render/text", func(ctx *ssss.Context) {
+	trygo.Get("/render/text", func(ctx *trygo.Context) {
 		ctx.Render("hello world").Text()
 	})
 
 	//render html
-	ssss.Get("/render/html", func(ctx *ssss.Context) {
+	trygo.Get("/render/html", func(ctx *trygo.Context) {
 		ctx.Render("<html><body><font size=\"6\" color=\"red\">hello world</font></body></html>").Html()
 	})
 
 	//render json
-	ssss.Get("/render/json", func(ctx *ssss.Context) {
-		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).Json()
+	trygo.Get("/render/json", func(ctx *trygo.Context) {
+		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).Json().Nowrap()
 	})
 
 	//render jsoncallback
-	ssss.Get("/render/jsoncallback", func(ctx *ssss.Context) {
+	trygo.Get("/render/jsoncallback", func(ctx *trygo.Context) {
 		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).
 			JsonCallback(
 				ctx.Input.GetValue(ctx.App.Config.Render.JsoncallbackParamName), //由前端决定是否JsonCallback格式输出数据
-			)
+			).Nowrap()
 	})
 
 	//render xml
-	ssss.Get("/render/xml", func(ctx *ssss.Context) {
-		ctx.Render([]byte("<user id=\"2\" name=\"John\" />")).Xml()
+	trygo.Get("/render/xml", func(ctx *trygo.Context) {
+		ctx.Render([]byte("<user id=\"2\" name=\"John\" />")).Xml().Nowrap()
 	})
 
 	//render template
-	ssss.Get("/render/template", func(ctx *ssss.Context) {
+	trygo.Get("/render/template", func(ctx *trygo.Context) {
 		id := ctx.Input.GetValue("id")
 		name := ctx.Input.GetValue("name")
 
-		tplNames := "admin/index.tpl" //相对ssss.DefaultApp.SetViewsPath()设置的位置
+		tplNames := "admin/index.tpl" //相对trygo.DefaultApp.SetViewsPath()设置的位置
 		data := make(map[interface{}]interface{})
 		data["id"] = id
 		data["name"] = name
@@ -55,20 +55,20 @@ func main() {
 	})
 
 	//render gzip
-	ssss.Get("/render/gzip", func(ctx *ssss.Context) {
+	trygo.Get("/render/gzip", func(ctx *trygo.Context) {
 		data := strings.Repeat("gzip demo,", 100)
 		ctx.Render(data).Text().
 			Gzip() //如果要默认支持Gzip，可修改配置 App.Config.Render.Gzip = true
 	})
 
 	//render struct
-	ssss.Get("/render/struct", func(ctx *ssss.Context) {
+	trygo.Get("/render/struct", func(ctx *trygo.Context) {
 		user := &User{Id: 123, Account: "demo001", Name: "demo", Sex: 1, Age: 18, Email: "demo@qq.com", Createtime: time.Now()}
 		ctx.Render(user)
 	})
 
 	//render slice
-	ssss.Get("/render/slice", func(ctx *ssss.Context) {
+	trygo.Get("/render/slice", func(ctx *trygo.Context) {
 
 		users := make([]User, 0)
 		for i := 1; i < 10; i++ {
@@ -79,7 +79,7 @@ func main() {
 	})
 
 	//render page
-	ssss.Get("/render/page", func(ctx *ssss.Context) {
+	trygo.Get("/render/page", func(ctx *trygo.Context) {
 		users := make([]User, 0)
 		for i := 1; i < 10; i++ {
 			user := User{Id: int64(i), Account: "demo" + strconv.Itoa(i), Name: "demo", Sex: 1, Age: 18, Email: "demo@qq.com", Createtime: time.Now()}
@@ -92,51 +92,51 @@ func main() {
 	})
 
 	//render wrap success
-	ssss.Get("/render/wrap/success", func(ctx *ssss.Context) {
+	trygo.Get("/render/wrap/success", func(ctx *trygo.Context) {
 		ctx.Render("ok").
 			Wrap()
 	})
 
 	//render wrap error
-	ssss.Get("/render/wrap/error", func(ctx *ssss.Context) {
-		//		panic(*ssss.NewErrorResult(ssss.ERROR_CODE_PARAM_ILLEGAL, ssss.ERROR_INFO_MAP[ssss.ERROR_CODE_PARAM_ILLEGAL]))
+	trygo.Get("/render/wrap/error", func(ctx *trygo.Context) {
+		//		panic(*trygo.NewErrorResult(trygo.ERROR_CODE_PARAM_ILLEGAL, trygo.ERROR_INFO_MAP[trygo.ERROR_CODE_PARAM_ILLEGAL]))
 		ctx.Render("error info").
-			Wrap(ssss.ERROR_CODE_PARAM_ILLEGAL).Status(404)
+			Wrap(trygo.ERROR_CODE_PARAM_ILLEGAL).Status(404)
 	})
 
 	//render file
-	ssss.Get("/render/file", func(ctx *ssss.Context) {
+	trygo.Get("/render/file", func(ctx *trygo.Context) {
 		ctx.RenderFile("D:\\Go\\api\\go1.txt").Gzip()
 	})
 
 	//set auto wrap
-	ssss.Get("/render/wrap/set/(?P<auto>[^/]+)$", func(ctx *ssss.Context) {
+	trygo.Get("/render/wrap/set/(?P<auto>[^/]+)$", func(ctx *trygo.Context) {
 
-		ctx.Input.Bind(&ssss.DefaultApp.Config.Render.Wrap, "auto")
+		ctx.Input.Bind(&trygo.DefaultApp.Config.Render.Wrap, "auto")
 
 		ctx.Render("<script>alert(\"ok\");window.location=\"/\";</script>").Html()
 	})
 
 	//set auto parse result wrap format
-	ssss.Get("/render/wrap/format/autoparse/(?P<auto>[^/]+)$", func(ctx *ssss.Context) {
+	trygo.Get("/render/wrap/format/autoparse/(?P<auto>[^/]+)$", func(ctx *trygo.Context) {
 
-		ctx.Input.Bind(&ssss.DefaultApp.Config.Render.AutoParseFormat, "auto")
+		ctx.Input.Bind(&trygo.DefaultApp.Config.Render.AutoParseFormat, "auto")
 
 		ctx.Render("<script>alert(\"ok\");window.location=\"/\";</script>").Html()
 	})
 
 	//设置静态文件根位置
-	ssss.SetStaticPath("/", "static/webcontent/")
+	trygo.SetStaticPath("/", "static/webcontent/")
 
 	//设置模板文件根位置, 相对或绝对路径
-	ssss.SetViewsPath("static/templates/")
+	trygo.SetViewsPath("static/templates/")
 
-	ssss.DefaultApp.Config.Render.AutoParseFormat = true
-	//ssss.DefaultApp.Config.Render.Gzip = true
-	//ssss.DefaultApp.Config.Render.Wrap = true
+	trygo.DefaultApp.Config.Render.AutoParseFormat = true
+	//trygo.DefaultApp.Config.Render.Gzip = true
+	//trygo.DefaultApp.Config.Render.Wrap = true
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
-	ssss.Run()
+	fmt.Println("HTTP ListenAndServe AT ", trygo.DefaultApp.Config.Listen.Addr)
+	trygo.Run()
 }
 
 type User struct {

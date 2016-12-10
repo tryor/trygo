@@ -3,16 +3,16 @@ package main
 import (
 	"fmt"
 
-	"github.com/trygo/ssss"
+	"github.com/tryor/trygo"
 )
 
 func main() {
 
-	ssss.Get("/", func(ctx *ssss.Context) {
+	trygo.Get("/", func(ctx *trygo.Context) {
 		ctx.Render("hello world")
 	})
 
-	fmt.Println("HTTP ListenAndServe AT ", ssss.DefaultApp.Config.Listen.Addr)
-	ssss.Run()
+	fmt.Println("HTTP ListenAndServe AT ", trygo.DefaultApp.Config.Listen.Addr)
+	trygo.Run()
 
 }
