@@ -33,8 +33,6 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	tc.SetKeepAlive(true)
 	if ln.keepalivePeriod > 0 {
 		tc.SetKeepAlivePeriod(ln.keepalivePeriod)
-	} else {
-		tc.SetKeepAlivePeriod(time.Minute * 3)
 	}
 	return tc, nil
 }
