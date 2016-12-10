@@ -185,7 +185,7 @@ func (this *render) Json() *render {
 	return this
 }
 
-func (this *render) JsonCallback(jsoncallback string) *render {
+func (this *render) Jsonp(jsoncallback string) *render {
 	if jsoncallback != "" {
 		this.jsoncallback = jsoncallback
 	}
@@ -222,13 +222,19 @@ func (this *render) Cookie(c *http.Cookie) *render {
 	return this
 }
 
-func (this *render) KeepAlive(b bool) {
+func (this *render) KeepAlive(b bool) *render {
 	if b {
 		this.rw.Header().Set("Connection", "keep-alive")
 	} else {
 		this.rw.Header().Set("Connection", "close")
 	}
+	return this
 }
+
+//func (this *render) Stream(rc io.Reader) *render {
+//	this.data = rc
+//	return this
+//}
 
 func (this *render) File(filename string) *render {
 	if this.prepareDataFunc != nil {
@@ -271,6 +277,11 @@ func (this *render) Data(data interface{}) *render {
 	if this.prepareDataFunc != nil {
 		this.Reset()
 		panic("Render: data already exists")
+	}
+
+	if r, ok := data.(io.Reader); ok {
+		this.data = r
+		return this
 	}
 
 	this.prepareDataFunc = func() {
@@ -360,15 +371,20 @@ func (this *render) Exec() error {
 		this.prepareDataFunc()
 	}
 
+	if this.err != nil {
+		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+	}
+
+	this.contentType = getContentType(this.contentType)
 	if this.contentType == "" {
 		this.contentType = toContentType(this.format)
 	}
 	if this.contentType == "" {
-		this.contentType = "txt"
-	}
-
-	if this.err != nil {
-		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+		if _, ok := this.data.(io.Reader); ok {
+			this.contentType = "application/octet-stream"
+		} else {
+			this.contentType = "text/plain; charset=utf-8"
+		}
 	}
 
 	var encoding string
@@ -376,7 +392,7 @@ func (this *render) Exec() error {
 		encoding = ParseEncoding(this.rw.Ctx.Request)
 	}
 
-	this.rw.Header().Set("Content-Type", getContentType(this.contentType))
+	this.rw.Header().Set("Content-Type", this.contentType)
 	switch data := this.data.(type) {
 	case []byte:
 		if _, _, err := WriteBody(encoding, this.rw, data, func(encodingEnable bool, name string) error {
@@ -414,6 +430,24 @@ func (this *render) Exec() error {
 			return nil
 		}); err != nil {
 			this.rw.Ctx.App.Logger.Warn("write file error, %v", err)
+			//this.err = err
+		}
+	case io.Reader:
+		defer func() {
+			if closer, ok := data.(io.ReadCloser); ok {
+				closer.Close()
+			}
+		}()
+		if _, _, err := WriteStream(encoding, this.rw, data, func(encodingEnable bool, name string) error {
+			if encodingEnable {
+				this.rw.SetHeader("Content-Encoding", name)
+			}
+			if this.status > 0 {
+				this.rw.WriteHeader(this.status)
+			}
+			return nil
+		}); err != nil {
+			this.rw.Ctx.App.Logger.Warn("write stream error, %v", err)
 			//this.err = err
 		}
 	default:

@@ -150,6 +150,10 @@ func WriteFile(encoding string, writer io.Writer, file *os.File, beforeWritingFu
 	return writeLevel(encoding, writer, file, flate.BestCompression, beforeWritingFunc...)
 }
 
+func WriteStream(encoding string, writer io.Writer, reader io.Reader, beforeWritingFunc ...func(enable bool, name string) error) (bool, string, error) {
+	return writeLevel(encoding, writer, reader, flate.BestCompression, beforeWritingFunc...)
+}
+
 // WriteBody reads  writes content to writer by the specific encoding(gzip/deflate)
 func WriteBody(encoding string, writer io.Writer, content []byte, beforeWritingFunc ...func(enable bool, name string) error) (bool, string, error) {
 	if encoding == "" || len(content) < gzipMinLength {
