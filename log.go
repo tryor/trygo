@@ -1,19 +1,19 @@
 package trygo
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
 	"runtime"
 	"strings"
 	"time"
 )
 
 type Logger interface {
-	Debug(format string, args ...interface{})
-	Info(format string, args ...interface{})
-	Warn(format string, args ...interface{})
-	Error(format string, args ...interface{})
-	Critical(format string, args ...interface{})
+	Debug(arg0 interface{}, args ...interface{})
+	Info(arg0 interface{}, args ...interface{})
+	Warn(arg0 interface{}, args ...interface{}) error
+	Error(arg0 interface{}, args ...interface{}) error
+	Critical(arg0 interface{}, args ...interface{}) error
 }
 
 var logger Logger
@@ -28,39 +28,70 @@ func SetLogger(l Logger) {
 
 type defaultLogger struct{}
 
-func (this *defaultLogger) Write(p []byte) (n int, err error) {
+func (l *defaultLogger) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
 	if p[len(p)-1] == '\n' {
 		p = p[0 : len(p)-1]
 	}
-	fmt.Printf("%v [LOG] %v %v\n", formatNow(), determine(5), string(p))
+	fmt.Printf("%s [LOG] %s %s\n", formatNow(), determine(5), string(p))
 	return len(p), nil
 }
 
 func (l *defaultLogger) Printf(format string, args ...interface{}) {
-	fmt.Printf("%v [LOG] %v %v\n", formatNow(), determine(3), fmt.Sprintf(format, args...))
+	fmt.Printf("%s [LOG] %s %s\n", formatNow(), determine(3), fmt.Sprintf(format, args...))
 }
 
-func (this *defaultLogger) Debug(format string, args ...interface{}) {
-	fmt.Printf("%v [DBG] %v %v\n", formatNow(), determine(2), fmt.Sprintf(format, args...))
+func (l *defaultLogger) Debug(arg0 interface{}, args ...interface{}) {
+	switch f := arg0.(type) {
+	case string:
+		l.log("DBG", f, args...)
+	default:
+		l.log("DBG", fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
+	}
 }
 
-func (this *defaultLogger) Info(format string, args ...interface{}) {
-	fmt.Printf("%v [INF] %v %v\n", formatNow(), determine(2), fmt.Sprintf(format, args...))
+func (l *defaultLogger) Info(arg0 interface{}, args ...interface{}) {
+	switch f := arg0.(type) {
+	case string:
+		l.log("INF", f, args...)
+	default:
+		l.log("INF", fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
+	}
 }
 
-func (this *defaultLogger) Warn(format string, args ...interface{}) {
-	fmt.Printf("%v [WRN] %v %v\n", formatNow(), determine(2), fmt.Sprintf(format, args...))
+func (l *defaultLogger) Warn(arg0 interface{}, args ...interface{}) error {
+	switch f := arg0.(type) {
+	case string:
+		return errors.New(l.log("WRN", f, args...))
+	default:
+		return errors.New(l.log("WRN", fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...))
+	}
 }
 
-func (this *defaultLogger) Error(format string, args ...interface{}) {
-	fmt.Printf("%v [ERR] %v %v\n", formatNow(), determine(2), fmt.Sprintf(format, args...))
+func (l *defaultLogger) Error(arg0 interface{}, args ...interface{}) error {
+	switch f := arg0.(type) {
+	case string:
+		return errors.New(l.log("ERR", f, args...))
+	default:
+		return errors.New(l.log("ERR", fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...))
+	}
 }
 
-func (this *defaultLogger) Critical(format string, args ...interface{}) {
-	fmt.Printf("%v [CRT] %v %v\n", formatNow(), determine(2), fmt.Sprintf(format, args...))
+func (l *defaultLogger) Critical(arg0 interface{}, args ...interface{}) error {
+	switch f := arg0.(type) {
+	case string:
+		return errors.New(l.log("CRT", f, args...))
+	default:
+		return errors.New(l.log("CRT", fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...))
+	}
+}
+
+func (l *defaultLogger) log(lvl string, format string, args ...interface{}) (msg string) {
+	msg = fmt.Sprintf(format, args...)
+	fmt.Printf("%s [%s] %s %s\n", formatNow(), lvl, determine(3), msg)
+	return
 }
 
 func formatNow() string {
@@ -86,8 +117,4 @@ func determine(skip int) string {
 		src = fmt.Sprintf("%s:%d(%s)", file, lineno, name)
 	}
 	return src
-}
-
-func buildLoginfo(r *http.Request, args ...interface{}) string {
-	return fmt.Sprintf("%v \"%s\"<->\"%s\": %s", r.URL.Path, r.Host, r.RemoteAddr, fmt.Sprint(args...))
 }
