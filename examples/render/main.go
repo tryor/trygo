@@ -109,6 +109,11 @@ func main() {
 		ctx.RenderFile("D:\\Go\\api\\go1.txt").Gzip()
 	})
 
+	//render stream
+	trygo.Get("/render/stream", func(ctx *trygo.Context) {
+		ctx.Render(strings.NewReader(strings.Repeat("stream... ", 1024)))
+	})
+
 	//set auto wrap
 	trygo.Get("/render/wrap/set/(?P<auto>[^/]+)$", func(ctx *trygo.Context) {
 
