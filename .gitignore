@@ -11,6 +11,10 @@ tmp/
 *.bak
 *.swp
 *~.nib
+
+*.exe
+task.txt
+
 local.properties
 .classpath
 .settings/
