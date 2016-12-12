@@ -40,23 +40,6 @@ func fileExists(name string) bool {
 	return true
 }
 
-//func fileStringSize(f *os.File) string {
-//	stat, err := data.Stat()
-//	return strconv.FormatInt(stat.Size(), 10)
-//}
-
-//				if err != nil {
-//					this.err = err
-//				} else {
-//					stat, err := data.Stat()
-//					if err != nil {
-//						this.rw.SetHeader("Content-Length", strconv.FormatInt(stat.Size(), 10))
-//					} else {
-//						this.err = err
-//					}
-//				}
-//			}
-
 func parseForm(r *http.Request, multipart bool) (url.Values, error) {
 	if multipart {
 		err := r.ParseMultipartForm(defaultMaxMemory)
@@ -81,7 +64,6 @@ func newValueOf(kind reflect.Kind) (*reflect.Value, error) {
 	var v reflect.Value
 	switch kind {
 	case reflect.String:
-		//str := ""
 		v = reflect.New(reflect.TypeOf(""))
 	case reflect.Bool:
 		v = reflect.New(reflect.TypeOf(false))
@@ -378,4 +360,8 @@ func toContentType(format string) string {
 		return "text/html; charset=utf-8"
 	}
 	return getContentType(format)
+}
+
+func buildLoginfo(r *http.Request, args ...interface{}) string {
+	return fmt.Sprintf("%s \"%s\"<->\"%s\": %s", r.URL.Path, r.Host, r.RemoteAddr, fmt.Sprint(args...))
 }
