@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Router Example</title>
+</head>
+<body>
+<h2>Router Example</h2>
+
+input/get &nbsp 
+<a href="http://127.0.0.1:7086/input/get?q1=v1&q2=v2&q3=f1&q3=f2&q3=f3">http://127.0.0.1:7086/input/get?q1=v1&q2=v2&q3=f1&q3=f2&q3=f3</a> <br>
+
+/input/post &nbsp 
+<form action="/input/post?q1=v1&q2=v2&q3=f1&q3=f2&q3=f3" method="post">
+   <input  type="text" size="20" name="p1" value="fv1">
+   <input  type="text" size="20" name="p2" value="fv21">
+   <input  type="text" size="20" name="p2" value="fv22">
+   <input  type="submit" />
+</form>
+
+/input/path/123 &nbsp 
+<a href="http://127.0.0.1:7086/input/path/123">http://127.0.0.1:7086/input/path/123</a> <br>
+
+/input/path/2016/06/08 &nbsp 
+<a href="http://127.0.0.1:7086/input/path/2016/06/08">http://127.0.0.1:7086/input/path/2016/06/08</a> <br>
+
+
+
+input/bind &nbsp 
+<a href="http://127.0.0.1:7086/input/bind?q1=v1&q2=2&q3=1.1&q3=2.2&q3=3.3">http://127.0.0.1:7086/input/bind?q1=v1&q2=2&q3=1.1&q3=2.2&q3=3.3</a> <br>
+
+input/bind/checkformat &nbsp 
+<a href="http://127.0.0.1:7086/input/bind/checkformat?q1=v1&q2=2&q3=1.1&q3=2.2&q3=3.3">http://127.0.0.1:7086/input/bind/checkformat?q1=v1&q2=2&q3=1.1&q3=2.2&q3=3.3</a> <br>
+
+/input/bind/struct &nbsp
+<form action="/input/bind/struct" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="name" value="demo">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="3" name="sex" value="1">
+   <input  type="text" size="3" name="age" value="18">
+   <input  type="text" size="15" name="email" value="trywen@qq.com">
+   <input  type="submit" />
+</form>
+
+
+
+/input/bind/auto &nbsp
+<form action="/input/bind/auto" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="10" name="devid" value="2">
+   <input  type="submit" />
+</form>
+
+/input/bind/auto/checkformat &nbsp
+<form action="/input/bind/auto/checkformat" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="10" name="devid" value="2">
+   <input  type="submit" />
+</form>
+
+/input/bind/auto/struct &nbsp
+<form action="/input/bind/auto/struct" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="name" value="demo">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="3" name="sex" value="1">
+   <input  type="text" size="3" name="age" value="18">
+   <input  type="text" size="15" name="email" value="trywen@qq.com">
+   <input  type="submit" />
+</form>
+
+
+</body>
+</html>
