@@ -6,11 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	//"github.com/tryor/fasthttp-trygo-bridging"
 	"github.com/tryor/trygo"
-
-	//	"tryor/fasthttp-trygo-bridging"
-	//	"tryor/trygo"
+	//"github.com/tryor/trygo-fasthttp-bridging"
 )
 
 /**
@@ -23,7 +20,7 @@ func main() {
 	go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"})                             //Default http, tcp4
 	go ListenAndServe(7086, &trygo.FcgiHttpServer{})                                        //Fcgi
 	go ListenAndServe(4433, &trygo.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
-	//	go ListenAndServe(9090, &bridging.FasthttpServer{})                 //FastHttp
+	//go ListenAndServe(9090, &bridging.FasthttpServer{})                                     //FastHttp
 	//go ListenAndServe(4439, &bridging.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
 	select {}
 
