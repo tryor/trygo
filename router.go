@@ -489,18 +489,18 @@ func defaultRecoverFunc(ctx *Context) {
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
-			ctx.App.Logger.Info("%s", buildLoginfo(ctx.Request, errtxt))
+			ctx.App.Logger.Info("%s", buildLoginfo(ctx.Request, errdata))
 		case Result:
 			errtxt = e.String()
 			code = http.StatusBadRequest
 			errdata = err
 			//默认认为被Result包装过的异常为业务上的错误，采用Info日志级别
-			ctx.App.Logger.Info("%s", buildLoginfo(ctx.Request, errtxt))
+			ctx.App.Logger.Info("%s", buildLoginfo(ctx.Request, errdata))
 		default:
 			errtxt = "Internal Server Error"
 			code = http.StatusInternalServerError
 			errdata = fmt.Sprintf("%s, %v", errtxt, err)
-			ctx.App.Logger.Critical("%s", buildLoginfo(ctx.Request, errtxt))
+			ctx.App.Logger.Critical("%s", buildLoginfo(ctx.Request, errdata))
 			if ctx.App.Config.PrintPanicDetail || ctx.App.Config.RunMode == DEV {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)

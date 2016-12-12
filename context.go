@@ -1,8 +1,11 @@
 package trygo
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -135,6 +138,172 @@ func getTaginfo(name string, taginfoses []Taginfos) *tagInfo {
 	return nil
 }
 
+func (input *input) checkDestStruct(dest interface{}, key string, isjson bool) reflect.Value {
+	value := reflect.ValueOf(dest)
+	if value.Kind() != reflect.Ptr {
+		panic("non-pointer can not bind: " + key)
+	}
+	value = value.Elem()
+	if !value.CanSet() {
+		panic("non-settable variable can not bind: " + key)
+	}
+	kind := value.Type().Kind()
+	if isjson {
+		if kind != reflect.Struct && kind != reflect.Slice {
+			panic("bind dest type is not struct")
+		}
+	} else {
+		if kind != reflect.Struct {
+			panic("bind dest type is not struct")
+		}
+	}
+	return value
+}
+
+func (input *input) checkData(value *reflect.Value, pname string, taginfos []Taginfos) error {
+	ctx := input.ctx
+	ptype := value.Type()
+	switch ptype.Kind() {
+	case reflect.Slice:
+		for i := 0; i < value.Len(); i++ {
+			sub := value.Index(i)
+			if err := input.checkData(&sub, pname, taginfos); err != nil {
+				return err
+			}
+		}
+	case reflect.Struct:
+		for i := 0; i < ptype.NumField(); i++ {
+			f := ptype.Field(i)
+			v := value.Field(i)
+			var name string
+			if f.Anonymous {
+				name = pname
+			} else {
+				paramTag := strings.TrimSpace(f.Tag.Get("field"))
+				if paramTag == "-" {
+					continue
+				}
+				paramTags := strings.SplitN(paramTag, ",", 2)
+				if len(paramTag) > 0 {
+					name = strings.TrimSpace(paramTags[0])
+					if name == "-" {
+						continue
+					}
+				}
+				if len(name) == 0 {
+					name = strings.ToLower(f.Name[0:1]) + f.Name[1:]
+				}
+				if ctx.App.Config.FormDomainModel && pname != "" {
+					name = pname + "." + name
+				}
+			}
+			if err := input.checkData(&v, name, taginfos); err != nil {
+				return err
+			}
+		}
+	default:
+		tagInfo := getTaginfo(pname, taginfos)
+		if tagInfo != nil {
+			err := tagInfo.Check(value.Interface())
+			if err != nil {
+				return errors.New(fmt.Sprintf("%v=%v, %v", pname, value.Interface(), err))
+			}
+		}
+	}
+	return nil
+}
+
+func (input *input) BindXml(dest interface{}, key string, taginfos ...Taginfos) error {
+	value := input.checkDestStruct(dest, key, false)
+	var err error
+	var data []byte
+	body := input.ctx.Request.Body
+	if body != nil {
+		data, err = ioutil.ReadAll(body)
+	}
+	if err == nil && len(data) > 0 {
+		err = xml.Unmarshal(data, dest)
+		if len(taginfos) == 0 {
+			taginfos = append(taginfos, parseTags(map[string]reflect.Type{key: value.Type()}, []string{}, input.ctx.App.Config.FormDomainModel))
+		}
+		if len(taginfos) > 0 {
+			err = input.checkData(&value, key, taginfos)
+		}
+	} else {
+		err = errors.New("bind xml error, body is empty")
+	}
+	if err != nil {
+		input.ctx.Error = err
+		if input.ctx.App.Config.ThrowBindParamPanic {
+			msg := fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, string(data), err)
+			panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
+		}
+	}
+	return err
+}
+
+func (input *input) BindJson(dest interface{}, key string, taginfos ...Taginfos) error {
+	value := input.checkDestStruct(dest, key, true)
+	var err error
+	var data []byte
+	body := input.ctx.Request.Body
+	if body != nil {
+		data, err = ioutil.ReadAll(body)
+	}
+	if err == nil && len(data) > 0 {
+		err = json.Unmarshal(data, dest)
+		if len(taginfos) == 0 {
+			taginfos = append(taginfos, parseTags(map[string]reflect.Type{key: value.Type()}, []string{}, input.ctx.App.Config.FormDomainModel))
+		}
+		if len(taginfos) > 0 {
+			err = input.checkData(&value, key, taginfos)
+		}
+	} else {
+		err = errors.New("bind json error, body is empty")
+	}
+	if err != nil {
+		input.ctx.Error = err
+		if input.ctx.App.Config.ThrowBindParamPanic {
+			msg := fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, string(data), err)
+			panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
+		}
+	}
+	return err
+}
+
+func (input *input) BindForm(dest interface{}, key string, taginfos ...Taginfos) error {
+	value := input.checkDestStruct(dest, key, false)
+	typ := value.Type()
+	isStruct := typ.Kind() == reflect.Struct
+	if len(taginfos) == 0 {
+		taginfos = append(taginfos, parseTags(map[string]reflect.Type{key: typ}, []string{}, input.ctx.App.Config.FormDomainModel))
+	}
+	rv, err := input.bind(key, typ, taginfos...)
+	if err != nil {
+		input.ctx.Error = err
+		if input.ctx.App.Config.ThrowBindParamPanic {
+			var msg string
+			if isStruct {
+				msg = fmt.Sprintf("%v, cause:%s.%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, err)
+			} else {
+				msg = fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, input.ctx.Input.Values[key], err)
+			}
+			panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
+		}
+		return err
+	}
+	if !rv.IsValid() {
+		err := errors.New("reflect value not is valid")
+		input.ctx.Error = err
+		if input.ctx.App.Config.ThrowBindParamPanic {
+			panic(err)
+		}
+		return err
+	}
+	value.Set(*rv)
+	return nil
+}
+
 func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) error {
 	value := reflect.ValueOf(dest)
 	if value.Kind() != reflect.Ptr {
@@ -147,7 +316,7 @@ func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) err
 
 	typ := value.Type()
 	isStruct := typ.Kind() == reflect.Struct
-	if isStruct {
+	if len(taginfos) == 0 && isStruct {
 		taginfos = append(taginfos, parseTags(map[string]reflect.Type{key: typ}, []string{}, input.ctx.App.Config.FormDomainModel))
 	}
 
@@ -155,7 +324,6 @@ func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) err
 	if err != nil {
 		input.ctx.Error = err
 		if input.ctx.App.Config.ThrowBindParamPanic {
-			//if input.ctx.App.Config.Render.Wrap {
 			var msg string
 			if isStruct {
 				msg = fmt.Sprintf("%v, cause:%s.%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, err)
@@ -163,8 +331,6 @@ func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) err
 				msg = fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], key, input.ctx.Input.Values[key], err)
 			}
 			panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
-			//}
-			//panic(err)
 		}
 		return err
 	}
@@ -224,7 +390,7 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 				//if _, ok := form[name]; !ok {
 				//	name = f.Name
 				//}
-				if ctx.App.Config.FormDomainModel {
+				if ctx.App.Config.FormDomainModel && pname != "" {
 					name = pname + "." + name
 				}
 			}
@@ -263,53 +429,3 @@ func (input *input) parseAndCheck(tagInfo *tagInfo, kind reflect.Kind, val strin
 	}
 	return nil
 }
-
-//func (ctx *Context) Abort(status int, body string) {
-//	ctx.ResponseWriter.WriteHeader(status)
-//	ctx.ResponseWriter.Write([]byte(body))
-//}
-
-//func (ctx *Context) NotModified() {
-//	ctx.ResponseWriter.WriteHeader(304)
-//}
-
-//func (ctx *Context) NotFound(message string) {
-//	ctx.Error(404, message)
-//}
-
-//func (ctx *Context) AddHeader(hdr string, val string) {
-//	ctx.ResponseWriter.Header().Add(hdr, val)
-//}
-
-////func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
-//func (ctx *Context) SetHeader(hdr string, val string) {
-//	ctx.ResponseWriter.Header().Set(hdr, val)
-//}
-
-//func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
-//	if unique {
-//		ctx.ResponseWriter.Writer.Header().Set(hdr, val)
-//	} else {
-//		ctx.ResponseWriter.Writer.Header().Add(hdr, val)
-//	}
-//}
-
-//func (ctx *Context) SetCookie(name string, value string, age int64) {
-//	var utctime time.Time
-//	if age == 0 {
-//		// 2^31 - 1 seconds (roughly 2038)
-//		utctime = time.Unix(2147483647, 0)
-//	} else {
-//		utctime = time.Unix(time.Now().Unix()+age, 0)
-//	}
-//	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
-//	ctx.ResponseWriter.AddHeader("Set-Cookie", cookie)
-//}
-
-//func webTime(t time.Time) string {
-//	ftime := t.Format(time.RFC1123)
-//	if strings.HasSuffix(ftime, "UTC") {
-//		ftime = ftime[0:len(ftime)-3] + "GMT"
-//	}
-//	return ftime
-//}

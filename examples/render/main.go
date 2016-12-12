@@ -29,10 +29,10 @@ func main() {
 		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).Json().Nowrap()
 	})
 
-	//render jsoncallback
-	trygo.Get("/render/jsoncallback", func(ctx *trygo.Context) {
+	//render jsonp
+	trygo.Get("/render/jsonp", func(ctx *trygo.Context) {
 		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).
-			JsonCallback(
+			Jsonp(
 				ctx.Input.GetValue(ctx.App.Config.Render.JsoncallbackParamName), //由前端决定是否JsonCallback格式输出数据
 			).Nowrap()
 	})

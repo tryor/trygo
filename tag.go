@@ -300,7 +300,7 @@ func parseTag(pname string, ptype reflect.Type, tag string, formDomainModel bool
 				if len(attrName) == 0 {
 					attrName = strings.ToLower(f.Name[0:1]) + f.Name[1:]
 				}
-				if formDomainModel {
+				if formDomainModel && pname != "" {
 					attrName = pname + "." + attrName
 				}
 			}
