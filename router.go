@@ -53,13 +53,33 @@ type iRouter interface {
 	Run(ctx *Context)
 }
 
+type funcParam struct {
+	name     string
+	isptr    bool //是否指针类型
+	isstruct bool //是否结构类型
+	typ      reflect.Type
+}
+
+func (p *funcParam) String() string {
+	return p.name
+}
+
+func (p *funcParam) New() reflect.Value {
+	if p.isptr {
+		return reflect.New(p.typ)
+	} else {
+		return reflect.Indirect(reflect.New(p.typ))
+	}
+}
+
 type defaultRouter struct {
 	app            *App
 	controllerType reflect.Type //控制器类型
 	funcName       string       //函数名称
 	funcType       reflect.Type //函数类型
-	funcParamNames []string     //函数参数名称列表
-	funcParamTags  Taginfos     //参数的Tag信息
+	//funcParamNames []string     //函数参数名称列表
+	funcParams    []*funcParam //函数参数信息
+	funcParamTags Taginfos     //参数的Tag信息
 }
 
 type restfulRouter struct {
@@ -120,9 +140,9 @@ func (router *defaultRouter) Run(ctx *Context) {
 			tags := router.funcParamTags
 			for i := 1; i < numIn; i++ {
 				idx := i - 1
-				name := router.funcParamNames[idx]
-				typ := router.funcType.In(i)
-				//Logger.Debug("tags:%v", tags)
+				funcParam := router.funcParams[idx]
+				name := funcParam.name
+				typ := funcParam.typ //router.funcType.In(i)
 				v, err := ctx.Input.bind(name, typ, tags)
 				if err != nil {
 					ctx.Error = err
@@ -134,11 +154,14 @@ func (router *defaultRouter) Run(ctx *Context) {
 							msg = fmt.Sprintf("%v, %s=%v, cause:%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], name, ctx.Input.Values[name], err)
 						}
 						panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, msg))
-						//panic(NewErrorResult(ERROR_CODE_PARAM_ILLEGAL, fmt.Sprintf("%v=%v,cause:%v", name, ctx.Input.Values[name], err)))
 					}
-					inx[idx] = reflect.Indirect(reflect.New(typ))
+					inx[idx] = funcParam.New()
 				} else {
-					inx[idx] = *v
+					if funcParam.isptr {
+						inx[idx] = v.Addr()
+					} else {
+						inx[idx] = *v
+					}
 				}
 			}
 		}
@@ -190,25 +213,32 @@ func (this *ControllerRegister) Add(methods string, pattern string, c IControlle
 		methodType = controllerTypeMethod.Type
 	}
 
-	routerinfo := &defaultRouter{app: this.app, funcName: name, controllerType: reflect.Indirect(controller).Type(), funcType: methodType, funcParamNames: make([]string, 0)}
+	routerinfo := &defaultRouter{app: this.app, funcName: name, controllerType: reflect.Indirect(controller).Type(), funcType: methodType, funcParams: make([]*funcParam, 0)}
 
 	if params != nil && len(params) > 0 {
 		for _, p := range params {
-			routerinfo.funcParamNames = append(routerinfo.funcParamNames, strings.SplitN(strings.TrimSpace(p), " ", 2)[0])
+			paramname := strings.SplitN(strings.TrimSpace(p), " ", 2)[0]
+			routerinfo.funcParams = append(routerinfo.funcParams, &funcParam{paramname, false, false, nil})
 		}
 	}
 
 	methodParamTypes := make(map[string]reflect.Type) //key为参数名，值为参数类型//make([]reflect.Type, numIn, numIn)
 	if methodType != nil {
 		//check paramter num
-		if methodType.NumIn()-1 != len(routerinfo.funcParamNames) {
-			panic(fmt.Sprintf("http: the number of parameter mismatch, %v(%v), %v(%v)", routerinfo.funcParamNames, len(routerinfo.funcParamNames), methodType.String(), methodType.NumIn()-1))
+		if methodType.NumIn()-1 != len(routerinfo.funcParams) {
+			panic(fmt.Sprintf("http: the number of parameter mismatch, %v(%v), %v(%v)", routerinfo.funcParams, len(routerinfo.funcParams), methodType.String(), methodType.NumIn()-1))
 		}
 
 		numIn := methodType.NumIn()
 		for i := 1; i < numIn; i++ {
 			ptype := methodType.In(i)
-			methodParamTypes[routerinfo.funcParamNames[i-1]] = ptype
+			funcparam := routerinfo.funcParams[i-1]
+			if ptype.Kind() == reflect.Ptr {
+				ptype = ptype.Elem()
+				funcparam.isptr = true
+			}
+			methodParamTypes[funcparam.name] = ptype
+
 			//check struct
 			if ptype.Kind() == reflect.Struct {
 				for i := 0; i < ptype.NumField(); i++ {
@@ -218,7 +248,9 @@ func (this *ControllerRegister) Add(methods string, pattern string, c IControlle
 						panic(fmt.Sprintf("http: first char is lower, Struct:%v.%v", ptype.Name(), f.Name))
 					}
 				}
+				funcparam.isstruct = true
 			}
+			funcparam.typ = ptype
 		}
 
 	}

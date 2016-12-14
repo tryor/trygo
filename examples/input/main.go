@@ -5,7 +5,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/tryor/trygo"
+	//"github.com/tryor/trygo"
+	"tryor/trygo"
 )
 
 /**
@@ -87,7 +88,7 @@ func main() {
 	trygo.Register("post", "/input/bind/auto/checkformat", &UserController{}, "Login(account, pwd string, devid int)", "account,limit:20,require", "pwd,limit:20,require", "devid,scope:[1 2 3 4],default:1")
 
 	//input, auto bind struct parameters and check format
-	trygo.Register("post", "/input/bind/auto/struct", &UserController{}, "Edit(user User)")
+	trygo.Register("post", "/input/bind/auto/struct", &UserController{}, "Edit(user *User)")
 
 	//设置静态文件根位置
 	trygo.SetStaticPath("/", "static/webcontent/")
@@ -102,10 +103,10 @@ type UserController struct {
 }
 
 func (c *UserController) Login(account, pwd string, devid int) {
-	c.Render(fmt.Sprintf("account:%v, pwd:%v, devid:%v", account, pwd, devid))
+	c.Render(fmt.Sprintf("account:%s, pwd:%s, devid:%v", account, pwd, devid))
 }
 
-func (c *UserController) Edit(user User) {
+func (c *UserController) Edit(user *User) {
 	c.Render(user).Json()
 }
 
