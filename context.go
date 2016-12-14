@@ -371,7 +371,8 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 			for _, str := range vals {
 				v := reflect.Indirect(reflect.New(ptype.Elem()))
 				if err := input.parseAndCheck(getTaginfo(pname, taginfos), kind, str, true, &v); err != nil {
-					return nil, err
+					return nil, errors.New(fmt.Sprintf("%v=%v, %v", pname, vals, err))
+					//return nil, err
 				}
 				vp = reflect.Append(vp, v)
 			}
@@ -407,7 +408,8 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 			}
 			v, err := input.bind(name, f.Type, taginfos...)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("%v=%v, %v", name, ctx.Input.Values[name], err))
+				//return nil, errors.New(fmt.Sprintf("%v=%v, %v", name, ctx.Input.Values[name], err))
+				return nil, err
 			}
 			vp.Field(i).Set(*v)
 		}
@@ -422,7 +424,8 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 			val = vals[0]
 		}
 		if err := input.parseAndCheck(getTaginfo(pname, taginfos), ptype.Kind(), val, ok, &vp); err != nil {
-			return nil, err
+			//return nil, err
+			return nil, errors.New(fmt.Sprintf("%v=%v, %v", pname, val, err))
 		}
 	}
 	return &vp, nil
