@@ -129,6 +129,17 @@ func (input *input) GetValues(key string) []string {
 	return input.Values[key]
 }
 
+func (input *input) Exist(key string) (ok bool) {
+	if input.Values == nil {
+		err := input.Parse()
+		if err != nil {
+			return false
+		}
+	}
+	_, ok = input.Values[key]
+	return
+}
+
 func getTaginfo(name string, taginfoses []Taginfos) *tagInfo {
 	for _, tis := range taginfoses {
 		if ti, ok := tis[name]; ok && ti != nil {
