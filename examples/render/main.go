@@ -26,7 +26,7 @@ func main() {
 
 	//render json
 	trygo.Get("/render/json", func(ctx *trygo.Context) {
-		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).Json().Nowrap()
+		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).Json()
 	})
 
 	//render jsonp
@@ -34,7 +34,7 @@ func main() {
 		ctx.Render([]byte("{\"id\":2,\"name\":\"John\"}")).
 			Jsonp(
 				ctx.Input.GetValue(ctx.App.Config.Render.JsoncallbackParamName), //由前端决定是否JsonCallback格式输出数据
-			).Nowrap()
+			)
 	})
 
 	//render xml
@@ -111,7 +111,7 @@ func main() {
 
 	//render stream
 	trygo.Get("/render/stream", func(ctx *trygo.Context) {
-		ctx.Render(strings.NewReader(strings.Repeat("stream... ", 1024)))
+		ctx.Render(strings.NewReader(strings.Repeat("stream... ", 1024))).Wrap().Text()
 	})
 
 	//set auto wrap

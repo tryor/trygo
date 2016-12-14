@@ -272,15 +272,16 @@ func (this *render) Template(templateName string, data map[interface{}]interface
 	return this
 }
 
-//data - 如果data为[]byte类型，将直接输出，不再会进行json,xml等编码
+//data - 如果data为[]byte或io.Reader类型，将直接输出，不再会进行json,xml等编码
 func (this *render) Data(data interface{}) *render {
 	if this.prepareDataFunc != nil {
 		this.Reset()
 		panic("Render: data already exists")
 	}
 
-	if r, ok := data.(io.Reader); ok {
-		this.data = r
+	switch data.(type) {
+	case io.Reader:
+		this.data = data
 		return this
 	}
 
@@ -614,7 +615,9 @@ func buildData(data interface{}) []byte {
 
 func buildJsonSucceed(data interface{}, wrap bool, jsoncallback ...string) ([]byte, error) {
 	if wrap {
-		data = NewSucceedResult(data)
+		if _, ok := data.([]byte); !ok {
+			data = NewSucceedResult(data)
+		}
 	}
 	if len(jsoncallback) > 0 && jsoncallback[0] != "" {
 		return buildJQueryCallback(jsoncallback[0], data)
@@ -625,7 +628,9 @@ func buildJsonSucceed(data interface{}, wrap bool, jsoncallback ...string) ([]by
 
 func buildXmlSucceed(data interface{}, wrap bool) ([]byte, error) {
 	if wrap {
-		data = NewSucceedResult(data)
+		if _, ok := data.([]byte); !ok {
+			data = NewSucceedResult(data)
+		}
 	}
 	return buildXml(data)
 }
