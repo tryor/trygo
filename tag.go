@@ -273,6 +273,8 @@ func parseOneTag(kind reflect.Kind, tag string) *tagInfo {
 //	return
 //}
 
+const inputTagname = "param"
+
 func parseTag(pname string, ptype reflect.Type, tag string, formDomainModel bool, formatedTags Taginfos) {
 	kind := ptype.Kind()
 	if kind == reflect.Struct {
@@ -283,7 +285,7 @@ func parseTag(pname string, ptype reflect.Type, tag string, formDomainModel bool
 			if f.Anonymous {
 				attrName = pname
 			} else {
-				paramTag := strings.TrimSpace(f.Tag.Get("field"))
+				paramTag := strings.TrimSpace(f.Tag.Get(inputTagname))
 				if paramTag == "-" {
 					continue
 				}

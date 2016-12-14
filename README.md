@@ -66,18 +66,18 @@ for example：
 ============
 ```go
 
-Http handler method parameter is struct, the struct field tag name is `field`,
+Http handler method parameter is struct, the struct field tag name is `param`,
 tag attributes will have name,limit,scope,default,require,pattern, for example:
-`field:"name,limit:20,scope:[1 2 3],default:1,require,pattern:xxxxx"`
+`param:"name,limit:20,scope:[1 2 3],default:1,require,pattern:xxxxx"`
 scope: [1 2 3] or [1~100] or [0~] or [~0] or [100~] or [~100] or [~-100 -20~-10 -1 0 1 2 3 10~20 100~]
 
 type UserForm struct {
-	Account string `field:"account,limit:20,require"` 
-	Pwd     string `field:"pwd,limit:10,require"`
-	Name    string `field:"name,limit:20"`
-	Sex     int    `field:"sex,scope:[1 2 3],default:1"` 
-	Age     uint   `field:"age,scope:[0~200]"` 
-	Email   string `field:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"` 
+	Account string `param:"account,limit:20,require"` 
+	Pwd     string `param:"pwd,limit:10,require"`
+	Name    string `param:"name,limit:20"`
+	Sex     int    `param:"sex,scope:[1 2 3],default:1"` 
+	Age     uint   `param:"age,scope:[0~200]"` 
+	Email   string `param:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"` 
 	Photo   string
 }
 
@@ -102,8 +102,8 @@ trygo.Register("GET|POST", "/user/create", &MainController{}, "Create(userform U
 Http handler method parameter is base data type, support parameter tag.
 
 const (
-	accountTag = `field:"account,limit:20,require"`
-	pwdTag     = `field:"pwd,limit:20,require"`
+	accountTag = `param:"account,limit:20,require"`
+	pwdTag     = `param:"pwd,limit:20,require"`
 )
 
 var LoginTags = []string{accountTag, pwdTag}

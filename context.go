@@ -179,7 +179,7 @@ func (input *input) checkData(value *reflect.Value, pname string, taginfos []Tag
 			if f.Anonymous {
 				name = pname
 			} else {
-				paramTag := strings.TrimSpace(f.Tag.Get("field"))
+				paramTag := strings.TrimSpace(f.Tag.Get(inputTagname))
 				if paramTag == "-" {
 					continue
 				}
@@ -373,7 +373,7 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 			if f.Anonymous {
 				name = pname
 			} else {
-				paramTag := strings.TrimSpace(f.Tag.Get("field"))
+				paramTag := strings.TrimSpace(f.Tag.Get(inputTagname))
 				if paramTag == "-" {
 					continue
 				}

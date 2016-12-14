@@ -127,14 +127,14 @@ func (c *UserController) Query() {
 }
 
 type User struct {
-	Id         int64     `field:"-"                           json:"id,omitempty" xml:"id,attr,omitempty"`
-	Account    string    `field:"account,limit:20,require"    json:"account,omitempty" xml:"account,attr,omitempty"`
-	Name       string    `field:"name,limit:20,require"       json:"name,omitempty" xml:"name,attr,omitempty"`
-	Pwd        string    `field:"pwd,limit:20,require"        json:"-" xml:"-"`
-	Sex        int       `field:"sex,scope:[1 2 3],default:1" json:"sex,omitempty" xml:"sex,attr,omitempty"`
-	Age        int       `field:"age,scope:[0~200],default:0" json:"age,omitempty" xml:"age,attr,omitempty"`
-	Email      string    `field:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*" json:"email,omitempty" xml:"email,attr,omitempty"`
-	Createtime time.Time `field:"-"                           json:"createtime,omitempty" xml:"createtime,attr,omitempty"`
+	Id         int64     `param:"-"                           json:"id,omitempty" xml:"id,attr,omitempty"`
+	Account    string    `param:"account,limit:20,require"    json:"account,omitempty" xml:"account,attr,omitempty"`
+	Name       string    `param:"name,limit:20,require"       json:"name,omitempty" xml:"name,attr,omitempty"`
+	Pwd        string    `param:"pwd,limit:20,require"        json:"-" xml:"-"`
+	Sex        int       `param:"sex,scope:[1 2 3],default:1" json:"sex,omitempty" xml:"sex,attr,omitempty"`
+	Age        int       `param:"age,scope:[0~200],default:0" json:"age,omitempty" xml:"age,attr,omitempty"`
+	Email      string    `param:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*" json:"email,omitempty" xml:"email,attr,omitempty"`
+	Createtime time.Time `param:"-"                           json:"createtime,omitempty" xml:"createtime,attr,omitempty"`
 }
 
 type page struct {
