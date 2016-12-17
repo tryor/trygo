@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type Logger interface {
+type LoggerInterface interface {
 	Debug(arg0 interface{}, args ...interface{})
 	Info(arg0 interface{}, args ...interface{})
 	Warn(arg0 interface{}, args ...interface{}) error
@@ -16,14 +16,10 @@ type Logger interface {
 	Critical(arg0 interface{}, args ...interface{}) error
 }
 
-var logger Logger
+var Logger LoggerInterface
 
 func init() {
-	SetLogger(&defaultLogger{})
-}
-
-func SetLogger(l Logger) {
-	logger = l
+	Logger = &defaultLogger{}
 }
 
 type defaultLogger struct{}

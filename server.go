@@ -27,7 +27,7 @@ func (hsl *HttpServer) ListenAndServe(app *App) error {
 	hsl.ReadTimeout = app.Config.Listen.ReadTimeout
 	hsl.WriteTimeout = app.Config.Listen.WriteTimeout
 	hsl.Addr = app.Config.Listen.Addr
-	hsl.Handler = FilterHandler(app, app.Handlers)
+	hsl.Handler = app.FilterHandler(app, app.Handlers)
 
 	if w, ok := app.Logger.(io.Writer); ok {
 		hsl.ErrorLog = log.New(w, "[HTTP]", 0)
@@ -39,7 +39,7 @@ func (hsl *HttpServer) ListenAndServe(app *App) error {
 	if err != nil {
 		return err
 	}
-	return hsl.Serve(FilterListener(app, l))
+	return hsl.Serve(app.FilterListener(app, l))
 }
 
 //TLS
@@ -53,7 +53,7 @@ func (hsl *TLSHttpServer) ListenAndServe(app *App) error {
 	hsl.ReadTimeout = app.Config.Listen.ReadTimeout
 	hsl.WriteTimeout = app.Config.Listen.WriteTimeout
 	hsl.Addr = app.Config.Listen.Addr
-	hsl.Handler = FilterHandler(app, app.Handlers)
+	hsl.Handler = app.FilterHandler(app, app.Handlers)
 
 	if w, ok := app.Logger.(io.Writer); ok {
 		hsl.ErrorLog = log.New(w, "[HTTPS]", 0)
@@ -68,7 +68,7 @@ func (hsl *TLSHttpServer) ListenAndServe(app *App) error {
 	if err != nil {
 		return err
 	}
-	tlsListener := tls.NewListener(FilterListener(app, l), config)
+	tlsListener := tls.NewListener(app.FilterListener(app, l), config)
 	return hsl.Serve(tlsListener)
 }
 
@@ -108,7 +108,7 @@ func (hsl *FcgiHttpServer) ListenAndServe(app *App) error {
 	app.Prepare()
 	var err error
 	var l net.Listener
-	handler := FilterHandler(app, app.Handlers)
+	handler := app.FilterHandler(app, app.Handlers)
 	addr := app.Config.Listen.Addr
 
 	if hsl.EnableStdIo {
@@ -134,7 +134,7 @@ func (hsl *FcgiHttpServer) ListenAndServe(app *App) error {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Listen: %v", err))
 	}
-	if err = fcgi.Serve(FilterListener(app, l), handler); err != nil {
+	if err = fcgi.Serve(app.FilterListener(app, l), handler); err != nil {
 		return errors.New(fmt.Sprintf("Fcgi.Serve: %v", err))
 	}
 	return nil

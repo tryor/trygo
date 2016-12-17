@@ -100,9 +100,9 @@ func (router *handlerRouter) Run(ctx *Context) {
 
 func (router *defaultRouter) Run(ctx *Context) {
 	vc := reflect.New(router.controllerType)
-	controller, ok := vc.Interface().(IController)
+	controller, ok := vc.Interface().(ControllerInterface)
 	if !ok {
-		panic(router.controllerType.String() + " is not IController interface")
+		panic(router.controllerType.String() + " is not ControllerInterface interface")
 	}
 	controller.Init(router.app, ctx, router.controllerType.Name(), router.funcName)
 
@@ -196,7 +196,7 @@ func NewControllerRegister(app *App) *ControllerRegister {
 //name - method on the container
 //params - parameter name list
 //tags parameter tag info
-func (this *ControllerRegister) Add(methods string, pattern string, c IController, name string, params []string, tags []string) {
+func (this *ControllerRegister) Add(methods string, pattern string, c ControllerInterface, name string, params []string, tags []string) {
 	if c == nil {
 		panic("http: controller is empty")
 	}

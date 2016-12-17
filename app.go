@@ -1,6 +1,7 @@
 package trygo
 
 import (
+	"net"
 	"net/http"
 	"path"
 	"reflect"
@@ -12,7 +13,12 @@ type App struct {
 	Config           *config
 	StaticDirs       map[string]string
 	TemplateRegister *TemplateRegister
-	Logger           Logger
+	Logger           LoggerInterface
+
+	//filter net.Listener
+	FilterListener func(app *App, l net.Listener) net.Listener
+	//filter http.Handler
+	FilterHandler func(app *App, h http.Handler) http.Handler
 
 	prepared bool
 }
@@ -23,7 +29,10 @@ func NewApp() *App {
 		TemplateRegister: NewTemplateRegister(nil),
 		Config:           newConfig(),
 		StaticDirs:       make(map[string]string),
-		Logger:           logger}
+		Logger:           Logger,
+		FilterListener:   DefaultFilterListener,
+		FilterHandler:    DefaultFilterHandler,
+	}
 
 	app.Handlers.app = app
 	app.TemplateRegister.app = app
@@ -34,7 +43,7 @@ func NewApp() *App {
 //pattern - URL path or regexp pattern
 //name - method on the container
 //tags - function parameter tag info, see struct tag
-func (app *App) Register(method string, pattern string, c IController, name string, tags ...string) *App {
+func (app *App) Register(method string, pattern string, c ControllerInterface, name string, tags ...string) *App {
 	funcname, params := parseMethod(name)
 	app.Handlers.Add(method, pattern, c, funcname, params, tags)
 	return app
@@ -50,7 +59,7 @@ func (app *App) RegisterFunc(methods, pattern string, f HandlerFunc) *App {
 	return app
 }
 
-func (app *App) RegisterRESTful(pattern string, c IController) *App {
+func (app *App) RegisterRESTful(pattern string, c ControllerInterface) *App {
 	app.Register("*", pattern, c, "")
 	if !isPattern(pattern) {
 		pattern = path.Join(pattern, "(?P<id>[^/]+)$")

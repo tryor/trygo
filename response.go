@@ -1,6 +1,7 @@
 package trygo
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -38,8 +40,6 @@ func Error(rw http.ResponseWriter, message string, code int) {
 }
 
 func (this *response) Error(message string, code int) {
-	//this.ResponseWriter.WriteHeader(code)
-	//_, err = this.ResponseWriter.Write([]byte(message))
 	Error(this, message, code)
 	return
 }
@@ -80,6 +80,14 @@ func (this *response) CloseNotify() <-chan bool {
 		return cn.CloseNotify()
 	}
 	return nil
+}
+
+func (this *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := this.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("doesn't support hijacking")
+	}
+	return hj.Hijack()
 }
 
 func (this *response) AddCookie(c *http.Cookie) {

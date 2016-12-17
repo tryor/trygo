@@ -45,7 +45,7 @@ type listenConfig struct {
 	//并发连接的最大数目, 默认：defaultConcurrency
 	Concurrency int
 	//连接Keep-Alive时间限制， 默认0, 无限制
-	MaxKeepaliveDuration time.Duration
+	//MaxKeepaliveDuration time.Duration
 }
 
 type renderConfig struct {
@@ -89,7 +89,7 @@ func newConfig() *config {
 	cfg.Listen.ReadTimeout = 0
 	cfg.Listen.WriteTimeout = 0
 	cfg.Listen.Concurrency = defaultConcurrency
-	cfg.Listen.MaxKeepaliveDuration = 0
+	//cfg.Listen.MaxKeepaliveDuration = 0
 
 	cfg.Render.AutoParseFormat = false
 	cfg.Render.FormatParamName = "fmt"

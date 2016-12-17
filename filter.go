@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func FilterHandler(app *App, h http.Handler) http.Handler {
+func DefaultFilterHandler(app *App, h http.Handler) http.Handler {
 	h = BodyLimitHandler(app, h)
 	return h
 }

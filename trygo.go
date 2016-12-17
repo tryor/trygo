@@ -17,7 +17,7 @@ func init() {
 	AppPath, _ = os.Getwd()
 }
 
-func Register(method string, pattern string, c IController, name string, tags ...string) *App {
+func Register(method string, pattern string, c ControllerInterface, name string, tags ...string) *App {
 	DefaultApp.Register(method, pattern, c, name, tags...)
 	return DefaultApp
 }
@@ -27,7 +27,7 @@ func RegisterHandler(pattern string, h http.Handler) *App {
 	return DefaultApp
 }
 
-func RegisterRESTful(pattern string, c IController) *App {
+func RegisterRESTful(pattern string, c ControllerInterface) *App {
 	DefaultApp.RegisterRESTful(pattern, c)
 	return DefaultApp
 }

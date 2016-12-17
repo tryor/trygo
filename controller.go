@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-type IController interface {
+type ControllerInterface interface {
 	Init(app *App, ctx *Context, controllerName, methodName string)
 	Prepare()
 	Get()

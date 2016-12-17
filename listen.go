@@ -1,22 +1,58 @@
 package trygo
 
 import (
+	"errors"
 	"net"
 	"sync"
 	"time"
 )
 
-func FilterListener(app *App, l net.Listener) net.Listener {
-	l = TcpKeepAliveListener(app, l, app.Config.Listen.MaxKeepaliveDuration)
-	l = LimitListener(app, l, app.Config.Listen.Concurrency)
+func DefaultFilterListener(app *App, l net.Listener) net.Listener {
+	l = TcpKeepAliveListener(l, time.Minute*3)
+	l = LimitListener(l, app.Config.Listen.Concurrency)
+	//if app.Config.Listen.MaxKeepaliveDuration > 0 {
+	//	l = LimitKeepaliveDurationListener(l, app.Config.Listen.MaxKeepaliveDuration)
+	//}
 	return l
 }
 
-func TcpKeepAliveListener(app *App, l net.Listener, keepalivePeriod time.Duration) net.Listener {
+func LimitKeepaliveDurationListener(l net.Listener, maxKeepaliveDuration time.Duration) net.Listener {
+	return &limitKeepaliveDurationListener{l, maxKeepaliveDuration}
+}
+
+var ErrKeepaliveTimeout = errors.New("exceeded MaxKeepaliveDuration")
+
+type limitKeepaliveDurationListener struct {
+	net.Listener
+	maxKeepaliveDuration time.Duration
+}
+
+func (l limitKeepaliveDurationListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	return &limitConnKeepaliveDuration{Conn: c, expire: time.Now().Add(l.maxKeepaliveDuration)}, nil
+}
+
+type limitConnKeepaliveDuration struct {
+	net.Conn
+	expire time.Time
+}
+
+func (c *limitConnKeepaliveDuration) Read(b []byte) (n int, err error) {
+	if time.Now().After(c.expire) {
+		c.Close()
+		return 0, ErrKeepaliveTimeout
+	}
+	return c.Conn.Read(b)
+}
+
+func TcpKeepAliveListener(l net.Listener, keepalivePeriod time.Duration) net.Listener {
 	if tc, ok := l.(*net.TCPListener); ok {
 		return &tcpKeepAliveListener{tc, keepalivePeriod}
 	}
-	app.Logger.Warn("Listen: Listener not is *net.TCPListener, %v", l.Addr())
+	Logger.Warn("Listen: Listener not is *net.TCPListener, %v", l.Addr())
 	return l
 }
 
@@ -30,6 +66,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	if err != nil {
 		return
 	}
+
 	tc.SetKeepAlive(true)
 	if ln.keepalivePeriod > 0 {
 		tc.SetKeepAlivePeriod(ln.keepalivePeriod)
@@ -37,7 +74,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
-func LimitListener(app *App, l net.Listener, n int) net.Listener {
+func LimitListener(l net.Listener, n int) net.Listener {
 	return &limitListener{l, make(chan struct{}, n)}
 }
 
