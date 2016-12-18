@@ -1,8 +1,8 @@
 ## trygo
 =======
-trygo 是基于Golang的http、web服务框架。此框架的目标并不是想做一个大而全的web服务容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：RESTful,MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML结果响应支持，模板，静态文件输出。暂时不支持会话管理模块。
+trygo 是基于Golang的http、web服务框架。此框架的目标并不是想做一个大而全的web服务容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：RESTful,MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML结果响应支持，模板，静态文件输出，net.Listener过滤，http.Handler过滤。暂时不支持会话管理模块。
 
-trygo HTTP and WEB services of framework for Golang. It is mainly used to develop the underlying HTTP service, Support feature:RESTful,MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML result response support,template,Static file output。Temporarily does not support session management module。
+trygo HTTP and WEB services of framework for Golang. It is mainly used to develop the underlying HTTP service, Support feature:RESTful,MVC,Methods the routing and regular routing,JSON/JSON(JQueryCallback)/XML result response support,template,Static file output, net.Listener filter, http.Handler filter. Temporarily does not support session management module.
 
 trygo is licensed under the Apache Licence, Version 2.0
 (http://www.apache.org/licenses/LICENSE-2.0.html).
@@ -208,8 +208,6 @@ type listenConfig struct {
 	WriteTimeout time.Duration
 	//并发连接的最大数目, 默认：defaultConcurrency
 	Concurrency int
-	//连接Keep-Alive时间限制， 默认0, 无限制
-	MaxKeepaliveDuration time.Duration
 }
 
 type renderConfig struct {
@@ -253,7 +251,7 @@ func newConfig() *config {
 	cfg.Listen.ReadTimeout = 0
 	cfg.Listen.WriteTimeout = 0
 	cfg.Listen.Concurrency = defaultConcurrency
-	cfg.Listen.MaxKeepaliveDuration = 0
+	//cfg.Listen.MaxKeepaliveDuration = 0
 
 	cfg.Render.AutoParseFormat = false
 	cfg.Render.FormatParamName = "fmt"

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/tryor/trygo"
-	//"github.com/tryor/trygo-fasthttp-bridging"
+	//"github.com/tryor/trygo-bridge/fasthttp"
+	//"github.com/tryor/trygo-bridge/graceful"
 )
 
 /**
@@ -16,12 +17,15 @@ import (
 
 func main() {
 
-	go ListenAndServe(9080)                                                                 //Default http
-	go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"})                             //Default http, tcp4
-	go ListenAndServe(7086, &trygo.FcgiHttpServer{})                                        //Fcgi
-	go ListenAndServe(4433, &trygo.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
-	//go ListenAndServe(9090, &bridging.FasthttpServer{})                                            //FastHttp
-	//go ListenAndServe(4439, &bridging.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
+	go ListenAndServe(9080)                                     //Default http
+	go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"}) //Default http, tcp4
+	go ListenAndServe(7086, &trygo.FcgiHttpServer{})            //Fcgi
+	//go ListenAndServe(7087, &trygo.FcgiHttpServer{Network: "unix"})                         //Fcgi unix
+	//go ListenAndServe(4433, &trygo.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"})        //Https
+	//go ListenAndServe(9090, &fasthttp.FasthttpServer{})                                            //FastHttp
+	//go ListenAndServe(4439, &fasthttp.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
+	//go ListenAndServe(9060, &graceful.GracefulServer{Timeout: 10 * time.Second})                   //graceful
+
 	select {}
 
 }
