@@ -30,9 +30,10 @@ func NewApp() *App {
 		Config:           newConfig(),
 		StaticDirs:       make(map[string]string),
 		Logger:           Logger,
-		FilterListener:   DefaultFilterListener,
-		FilterHandler:    DefaultFilterHandler,
 	}
+
+	app.FilterListener = func(app *App, l net.Listener) net.Listener { return l }
+	app.FilterHandler = func(app *App, h http.Handler) http.Handler { return h }
 
 	app.Handlers.app = app
 	app.TemplateRegister.app = app

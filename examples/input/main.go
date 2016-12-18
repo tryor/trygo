@@ -5,8 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	//"github.com/tryor/trygo"
-	"tryor/trygo"
+	"github.com/tryor/trygo"
 )
 
 /**
