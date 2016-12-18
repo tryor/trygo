@@ -20,7 +20,7 @@ func main() {
 	go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"})                             //Default http, tcp4
 	go ListenAndServe(7086, &trygo.FcgiHttpServer{})                                        //Fcgi
 	go ListenAndServe(4433, &trygo.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //Https
-	//go ListenAndServe(9090, &bridging.FasthttpServer{})                                     //FastHttp
+	//go ListenAndServe(9090, &bridging.FasthttpServer{})                                            //FastHttp
 	//go ListenAndServe(4439, &bridging.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
 	select {}
 
@@ -29,6 +29,8 @@ func main() {
 func ListenAndServe(port int, server ...trygo.Server) {
 	app := trygo.NewApp()
 	app.Config.Listen.Addr = fmt.Sprintf("0.0.0.0:%v", port)
+	//	app.Config.Listen.ReadTimeout = time.Second * 2
+	//	app.Config.Listen.WriteTimeout = time.Second * 3
 	//app.Config.Listen.Concurrency = 10
 	//app.Config.MaxRequestBodySize = 1024 * 1024 * 8
 	//app.Config.AutoParseRequest = false
