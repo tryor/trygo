@@ -42,11 +42,12 @@ func (ctx *Context) Reset(rw http.ResponseWriter, r *http.Request, app *App) *Co
 	} else {
 		ctx.ResponseWriter.ResponseWriter = rw
 	}
+	ctx.ResponseWriter.render.Reset()
+
 	ctx.Request = r
 	ctx.App = app
 	ctx.Multipart = strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data")
 	ctx.Input.Values = nil
-	ctx.ResponseWriter.render.Reset()
 	return ctx
 }
 

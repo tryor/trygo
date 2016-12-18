@@ -105,12 +105,12 @@ type render struct {
 	wrapCode int //包装的消息code
 	noWrap   bool
 	gzip     bool //暂时未实现
+	chunked  bool
 
 	//数据
 	status int //http status
-
-	data interface{}
-	err  error
+	data   interface{}
+	err    error
 
 	prepareDataFunc func()
 
@@ -127,6 +127,11 @@ func (this *render) String() string {
 		length = len(d)
 	}
 	return fmt.Sprintf("Render: started:%v, format:%s, contentType:%s, jsoncallback:%s, wrap:%v, status:%d, len(data):%d, error:%v", this.started, this.format, this.contentType, this.jsoncallback, this.wrap, this.status, length, this.err)
+}
+
+func (this *render) Chunked() *render {
+	this.chunked = true
+	return this
 }
 
 func (this *render) Cancel() {
@@ -408,7 +413,9 @@ func (this *render) Exec() error {
 			if encodingEnable {
 				this.rw.SetHeader("Content-Encoding", name)
 			} else {
-				this.rw.SetHeader("Content-Length", strconv.Itoa(len(data)))
+				if !this.chunked {
+					this.rw.SetHeader("Content-Length", strconv.Itoa(len(data)))
+				}
 			}
 			if this.status > 0 {
 				this.rw.WriteHeader(this.status)
@@ -430,7 +437,9 @@ func (this *render) Exec() error {
 					this.err = err
 					return err
 				} else {
-					this.rw.SetHeader("Content-Length", strconv.FormatInt(stat.Size(), 10))
+					if !this.chunked {
+						this.rw.SetHeader("Content-Length", strconv.FormatInt(stat.Size(), 10))
+					}
 				}
 			}
 			if this.status > 0 {
