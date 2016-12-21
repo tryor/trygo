@@ -49,10 +49,6 @@ type controllerInfo struct {
 	patternLength int
 }
 
-type iRouter interface {
-	Run(ctx *Context)
-}
-
 type funcParam struct {
 	name     string
 	isptr    bool //是否指针类型
@@ -72,7 +68,42 @@ func (p *funcParam) New() reflect.Value {
 	}
 }
 
+type iRouter interface {
+	//是否自动解析请求参数
+	ParseRequest(b bool) iRouter
+	run(ctx *Context)
+	parseRequestFlag() int8
+}
+
+const (
+	parseRequestDefault = iota
+	parseRequestYes
+	parseRequestNo
+)
+
+type router struct {
+	//0=def, 1=parse, 2=no parse
+	parseRequest int8
+}
+
+func (r *router) run(ctx *Context) {
+}
+
+func (r *router) ParseRequest(b bool) iRouter {
+	if b {
+		r.parseRequest = parseRequestYes
+	} else {
+		r.parseRequest = parseRequestNo
+	}
+	return r
+}
+
+func (r *router) parseRequestFlag() int8 {
+	return r.parseRequest
+}
+
 type defaultRouter struct {
+	router
 	app            *App
 	controllerType reflect.Type //控制器类型
 	funcName       string       //函数名称
@@ -83,33 +114,35 @@ type defaultRouter struct {
 }
 
 type restfulRouter struct {
+	router
 	handlerFunc HandlerFunc
 }
 
 type handlerRouter struct {
+	router
 	handler http.Handler
 }
 
-func (router *restfulRouter) Run(ctx *Context) {
-	router.handlerFunc(ctx)
+func (r *restfulRouter) run(ctx *Context) {
+	r.handlerFunc(ctx)
 }
 
-func (router *handlerRouter) Run(ctx *Context) {
-	router.handler.ServeHTTP(ctx.ResponseWriter, ctx.Request)
+func (r *handlerRouter) run(ctx *Context) {
+	r.handler.ServeHTTP(ctx.ResponseWriter, ctx.Request)
 }
 
-func (router *defaultRouter) Run(ctx *Context) {
-	vc := reflect.New(router.controllerType)
+func (r *defaultRouter) run(ctx *Context) {
+	vc := reflect.New(r.controllerType)
 	controller, ok := vc.Interface().(ControllerInterface)
 	if !ok {
-		panic(router.controllerType.String() + " is not ControllerInterface interface")
+		panic(r.controllerType.String() + " is not ControllerInterface interface")
 	}
-	controller.Init(router.app, ctx, router.controllerType.Name(), router.funcName)
+	controller.Init(r.app, ctx, r.controllerType.Name(), r.funcName)
 
 	controller.Prepare()
 	defer controller.Finish()
 
-	if router.funcName == "" {
+	if r.funcName == "" {
 		switch convMethod(ctx.Request.Method) {
 		case GET:
 			controller.Get()
@@ -132,21 +165,21 @@ func (router *defaultRouter) Run(ctx *Context) {
 		}
 
 	} else {
-		method := vc.MethodByName(router.funcName)
-		numIn := router.funcType.NumIn()
+		method := vc.MethodByName(r.funcName)
+		numIn := r.funcType.NumIn()
 		inx := make([]reflect.Value, numIn-1)
 		if numIn > 1 {
 			//auto bind func parameters
-			tags := router.funcParamTags
+			tags := r.funcParamTags
 			for i := 1; i < numIn; i++ {
 				idx := i - 1
-				funcParam := router.funcParams[idx]
+				funcParam := r.funcParams[idx]
 				name := funcParam.name
 				typ := funcParam.typ //router.funcType.In(i)
 				v, err := ctx.Input.bind(name, typ, tags)
 				if err != nil {
 					ctx.Error = err
-					if router.app.Config.ThrowBindParamPanic {
+					if r.app.Config.ThrowBindParamPanic {
 						var msg string
 						if typ.Kind() == reflect.Struct {
 							msg = fmt.Sprintf("%v, cause:%s.%v", ERROR_INFO_MAP[ERROR_CODE_PARAM_ILLEGAL], name, err)
@@ -196,7 +229,7 @@ func NewControllerRegister(app *App) *ControllerRegister {
 //name - method on the container
 //params - parameter name list
 //tags parameter tag info
-func (this *ControllerRegister) Add(methods string, pattern string, c ControllerInterface, name string, params []string, tags []string) {
+func (this *ControllerRegister) Add(methods string, pattern string, c ControllerInterface, name string, params []string, tags []string) (r iRouter) {
 	if c == nil {
 		panic("http: controller is empty")
 	}
@@ -262,14 +295,19 @@ func (this *ControllerRegister) Add(methods string, pattern string, c Controller
 	}
 
 	this.add(methods, pattern, routerinfo)
+	return routerinfo
 }
 
-func (this *ControllerRegister) AddMethod(methods, pattern string, f HandlerFunc) {
-	this.add(methods, pattern, &restfulRouter{f})
+func (this *ControllerRegister) AddMethod(methods, pattern string, f HandlerFunc) (r iRouter) {
+	r = &restfulRouter{handlerFunc: f}
+	this.add(methods, pattern, r)
+	return
 }
 
-func (this *ControllerRegister) AddHandler(pattern string, h http.Handler) {
-	this.add("*", pattern, &handlerRouter{h})
+func (this *ControllerRegister) AddHandler(pattern string, h http.Handler) (r iRouter) {
+	r = &handlerRouter{handler: h}
+	this.add("*", pattern, r)
+	return
 }
 
 func (this *ControllerRegister) add(methods, pattern string, router iRouter) {
@@ -337,36 +375,36 @@ func (this *ControllerRegister) add(methods, pattern string, router iRouter) {
 //    Get("/", func(ctx *ssss.Context){
 //          ...
 //    })
-func (this *ControllerRegister) Get(pattern string, f HandlerFunc) {
-	this.AddMethod("GET", pattern, f)
+func (this *ControllerRegister) Get(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("GET", pattern, f)
 }
 
-func (this *ControllerRegister) Post(pattern string, f HandlerFunc) {
-	this.AddMethod("POST", pattern, f)
+func (this *ControllerRegister) Post(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("POST", pattern, f)
 }
 
-func (this *ControllerRegister) Put(pattern string, f HandlerFunc) {
-	this.AddMethod("PUT", pattern, f)
+func (this *ControllerRegister) Put(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("PUT", pattern, f)
 }
 
-func (this *ControllerRegister) Delete(pattern string, f HandlerFunc) {
-	this.AddMethod("DELETE", pattern, f)
+func (this *ControllerRegister) Delete(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("DELETE", pattern, f)
 }
 
-func (this *ControllerRegister) Head(pattern string, f HandlerFunc) {
-	this.AddMethod("HEAD", pattern, f)
+func (this *ControllerRegister) Head(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("HEAD", pattern, f)
 }
 
-func (this *ControllerRegister) Patch(pattern string, f HandlerFunc) {
-	this.AddMethod("PATCH", pattern, f)
+func (this *ControllerRegister) Patch(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("PATCH", pattern, f)
 }
 
-func (this *ControllerRegister) Options(pattern string, f HandlerFunc) {
-	this.AddMethod("OPTIONS", pattern, f)
+func (this *ControllerRegister) Options(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("OPTIONS", pattern, f)
 }
 
-func (this *ControllerRegister) Any(pattern string, f HandlerFunc) {
-	this.AddMethod("*", pattern, f)
+func (this *ControllerRegister) Any(pattern string, f HandlerFunc) iRouter {
+	return this.AddMethod("*", pattern, f)
 }
 
 func (this *ControllerRegister) hasHttpMethod(router *controllerInfo, method int8) bool {
@@ -470,7 +508,9 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 }
 
 func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, restform url.Values) {
-	if this.app.Config.AutoParseRequest {
+
+	preqflag := routerinfo.router.parseRequestFlag()
+	if preqflag == parseRequestYes || (preqflag == parseRequestDefault && this.app.Config.AutoParseRequest) {
 		err := ctx.Input.Parse()
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF || strings.HasSuffix(err.Error(), io.EOF.Error()) {
@@ -488,7 +528,7 @@ func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, r
 		ctx.Input.AddValues(restform)
 	}
 
-	routerinfo.router.Run(ctx)
+	routerinfo.router.run(ctx)
 	render := ctx.ResponseWriter.render
 	if render.started {
 		err := render.Exec()

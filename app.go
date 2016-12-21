@@ -44,69 +44,57 @@ func NewApp() *App {
 //pattern - URL path or regexp pattern
 //name - method on the container
 //tags - function parameter tag info, see struct tag
-func (app *App) Register(method string, pattern string, c ControllerInterface, name string, tags ...string) *App {
+func (app *App) Register(method string, pattern string, c ControllerInterface, name string, tags ...string) iRouter {
 	funcname, params := parseMethod(name)
-	app.Handlers.Add(method, pattern, c, funcname, params, tags)
-	return app
+	return app.Handlers.Add(method, pattern, c, funcname, params, tags)
 }
 
-func (app *App) RegisterHandler(pattern string, h http.Handler) *App {
-	app.Handlers.AddHandler(pattern, h)
-	return app
+func (app *App) RegisterHandler(pattern string, h http.Handler) iRouter {
+	return app.Handlers.AddHandler(pattern, h)
 }
 
-func (app *App) RegisterFunc(methods, pattern string, f HandlerFunc) *App {
-	app.Handlers.AddMethod(methods, pattern, f)
-	return app
+func (app *App) RegisterFunc(methods, pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.AddMethod(methods, pattern, f)
 }
 
-func (app *App) RegisterRESTful(pattern string, c ControllerInterface) *App {
-	app.Register("*", pattern, c, "")
+func (app *App) RegisterRESTful(pattern string, c ControllerInterface) iRouter {
+	//app.Register("*", pattern, c, "")
 	if !isPattern(pattern) {
 		pattern = path.Join(pattern, "(?P<id>[^/]+)$")
 	}
-	app.Register("*", pattern, c, "")
-	return app
+	return app.Register("*", pattern, c, "")
 }
 
-func (app *App) Get(pattern string, f HandlerFunc) *App {
-	app.Handlers.Get(pattern, f)
-	return app
+func (app *App) Get(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Get(pattern, f)
 }
 
-func (app *App) Post(pattern string, f HandlerFunc) *App {
-	app.Handlers.Post(pattern, f)
-	return app
+func (app *App) Post(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Post(pattern, f)
 }
 
-func (app *App) Put(pattern string, f HandlerFunc) *App {
-	app.Handlers.Put(pattern, f)
-	return app
+func (app *App) Put(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Put(pattern, f)
 }
 
-func (app *App) Delete(pattern string, f HandlerFunc) *App {
-	app.Handlers.Delete(pattern, f)
-	return app
+func (app *App) Delete(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Delete(pattern, f)
 }
 
-func (app *App) Head(pattern string, f HandlerFunc) *App {
-	app.Handlers.Head(pattern, f)
-	return app
+func (app *App) Head(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Head(pattern, f)
 }
 
-func (app *App) Patch(pattern string, f HandlerFunc) *App {
-	app.Handlers.Patch(pattern, f)
-	return app
+func (app *App) Patch(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Patch(pattern, f)
 }
 
-func (app *App) Options(pattern string, f HandlerFunc) *App {
-	app.Handlers.Options(pattern, f)
-	return app
+func (app *App) Options(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Options(pattern, f)
 }
 
-func (app *App) Any(pattern string, f HandlerFunc) *App {
-	app.Handlers.Any(pattern, f)
-	return app
+func (app *App) Any(pattern string, f HandlerFunc) iRouter {
+	return app.Handlers.Any(pattern, f)
 }
 
 func (app *App) SetStaticPath(url string, path string) *App {
