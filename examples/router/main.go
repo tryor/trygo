@@ -16,8 +16,8 @@ import (
 func main() {
 	//router, get
 	trygo.Get("/router/get", func(ctx *trygo.Context) {
-		p1 := ctx.Input.GetValue("p1")
-		p2 := ctx.Input.GetValue("p2")
+		p1 := ctx.Input.Get("p1")
+		p2 := ctx.Input.Get("p2")
 		ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
 	})
 
@@ -36,7 +36,12 @@ func main() {
 	})
 
 	//router, http.Handler
-	trygo.RegisterHandler("/router/handler", &Handler{})
+	trygo.RegisterHandler("/router/handler", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		ctx := trygo.NewContext(rw, r, trygo.DefaultApp)
+		p1 := ctx.Input.GetValue("p1")
+		p2 := ctx.Input.GetValue("p2")
+		ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
+	}))
 
 	//router, RESTful
 	trygo.RegisterRESTful("/router/restful", &RESTfulController{})
@@ -65,14 +70,14 @@ func main() {
 
 }
 
-type Handler struct{}
+//type Handler struct{}
 
-func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	ctx := trygo.NewContext(rw, r, trygo.DefaultApp)
-	p1 := ctx.Input.GetValue("p1")
-	p2 := ctx.Input.GetValue("p2")
-	ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
-}
+//func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+//	ctx := trygo.NewContext(rw, r, trygo.DefaultApp)
+//	p1 := ctx.Input.GetValue("p1")
+//	p2 := ctx.Input.GetValue("p2")
+//	ctx.Render("(" + ctx.Request.Method + ")hello world, p1=" + p1 + ", p2=" + p2)
+//}
 
 type RESTfulController struct {
 	trygo.Controller

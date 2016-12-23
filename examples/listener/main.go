@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tryor/trygo"
+	//"github.com/tryor/trygo"
 	//"github.com/tryor/trygo-bridge/fasthttp"
 	//"github.com/tryor/trygo-bridge/graceful"
+
+	"tryor/trygo"
 )
 
 /**
@@ -17,10 +19,10 @@ import (
 
 func main() {
 
-	go ListenAndServe(9080)                                     //Default http
-	go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"}) //Default http, tcp4
-	go ListenAndServe(7086, &trygo.FcgiHttpServer{})            //Fcgi
-	//go ListenAndServe(7087, &trygo.FcgiHttpServer{Network: "unix"})                         //Fcgi unix
+	go ListenAndServe(7086) //Default http
+	//go ListenAndServe(9081, &trygo.HttpServer{Network: "tcp4"}) //Default http, tcp4
+	//go ListenAndServe(6086, &trygo.FcgiHttpServer{})            //Fcgi
+	//go ListenAndServe(7087, &trygo.FcgiHttpServer{Network: "unix"})                                //Fcgi unix
 	//go ListenAndServe(4433, &trygo.TLSHttpServer{CertFile: "cert.pem", KeyFile: "key.pem"})        //Https
 	//go ListenAndServe(9090, &fasthttp.FasthttpServer{})                                            //FastHttp
 	//go ListenAndServe(4439, &fasthttp.TLSFasthttpServer{CertFile: "cert.pem", KeyFile: "key.pem"}) //FastHttps
@@ -38,6 +40,17 @@ func ListenAndServe(port int, server ...trygo.Server) {
 	//app.Config.Listen.Concurrency = 10
 	//app.Config.MaxRequestBodySize = 1024 * 1024 * 8
 	//app.Config.AutoParseRequest = false
+
+	app.Get("/statinfo", func(ctx *trygo.Context) {
+		type Statinfo struct {
+			ConcurrentConns     int32
+			PeakConcurrentConns int32
+		}
+		var statinfo Statinfo
+		statinfo.ConcurrentConns = app.Statinfo.ConcurrentConns()
+		statinfo.PeakConcurrentConns = app.Statinfo.PeakConcurrentConns()
+		ctx.Render(statinfo).Json()
+	})
 
 	app.Post("/reqinfo", func(ctx *trygo.Context) {
 		reqinfo := ""
