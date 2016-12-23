@@ -347,7 +347,7 @@ func (this *render) Reset() {
 	//this.canceled = 0
 }
 
-func (this *render) Exec() error {
+func (this *render) Exec(flush ...bool) error {
 	defer this.Reset()
 
 	if !this.started {
@@ -386,7 +386,11 @@ func (this *render) Exec() error {
 	}
 
 	if this.err != nil {
-		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+		this.err = renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+		if len(flush) > 0 && flush[0] {
+			this.rw.Flush()
+		}
+		return this.err
 	}
 
 	this.contentType = getContentType(this.contentType)
@@ -474,7 +478,10 @@ func (this *render) Exec() error {
 	}
 
 	if this.err != nil && !this.IsCanceled(true) {
-		return renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+		this.err = renderError(this.rw, this.err, http.StatusInternalServerError, this.wrap, ERROR_CODE_RUNTIME, this.format, this.jsoncallback)
+	}
+	if len(flush) > 0 && flush[0] {
+		this.rw.Flush()
 	}
 	return this.err
 }

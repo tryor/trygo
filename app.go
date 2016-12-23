@@ -14,7 +14,7 @@ type App struct {
 	StaticDirs       map[string]string
 	TemplateRegister *TemplateRegister
 	Logger           LoggerInterface
-
+	Statinfo         *statinfo
 	//filter net.Listener
 	FilterListener func(app *App, l net.Listener) net.Listener
 	//filter http.Handler
@@ -34,7 +34,7 @@ func NewApp() *App {
 
 	app.FilterListener = func(app *App, l net.Listener) net.Listener { return l }
 	app.FilterHandler = func(app *App, h http.Handler) http.Handler { return h }
-
+	app.Statinfo = newStatinfo(app)
 	app.Handlers.app = app
 	app.TemplateRegister.app = app
 	return app

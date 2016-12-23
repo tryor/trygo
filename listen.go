@@ -9,7 +9,7 @@ import (
 
 func DefaultFilterListener(app *App, l net.Listener) net.Listener {
 	l = TcpKeepAliveListener(l, time.Minute*3)
-	l = LimitListener(l, app.Config.Listen.Concurrency)
+	l = LimitListener(l, app)
 	//if app.Config.Listen.MaxKeepaliveDuration > 0 {
 	//	l = LimitKeepaliveDurationListener(l, app.Config.Listen.MaxKeepaliveDuration)
 	//}
@@ -74,19 +74,22 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
-func LimitListener(l net.Listener, n int) net.Listener {
-	return &limitListener{l, make(chan struct{}, n)}
+func LimitListener(l net.Listener, app *App) net.Listener {
+	return &limitListener{l, make(chan struct{}, app.Config.Listen.Concurrency), app.Statinfo}
 }
 
 type limitListener struct {
 	net.Listener
-	sem chan struct{}
+	sem      chan struct{}
+	statinfo *statinfo
 }
 
 func (l *limitListener) acquire() {
 	l.sem <- struct{}{}
+	l.statinfo.incConcurrentConns()
 }
 func (l *limitListener) release() {
+	l.statinfo.decConcurrentConns()
 	<-l.sem
 }
 

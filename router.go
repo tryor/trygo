@@ -500,10 +500,10 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 
 	err := Render(ctx, "Method Not Allowed").Text().
 		Status(http.StatusMethodNotAllowed).
-		Exec()
+		Exec(true)
 	if err != nil {
-		this.app.Logger.Critical("%v", err)
-		http.Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+		this.app.Logger.Critical("%s", buildLoginfo(ctx.Request, err))
+		//http.Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -533,7 +533,7 @@ func (this *ControllerRegister) call(routerinfo *controllerInfo, ctx *Context, r
 	if render.started {
 		err := render.Exec()
 		if err != nil {
-			panic(err)
+			ctx.App.Logger.Critical("%s", buildLoginfo(ctx.Request, err))
 		}
 	}
 }
@@ -585,11 +585,11 @@ func defaultRecoverFunc(ctx *Context) {
 		}
 
 		err := Render(ctx, errdata).Status(code).
-			Exec()
+			Exec(true)
 
 		if err != nil {
-			ctx.App.Logger.Critical("%v \"%s\"<->\"%s\": %s", ctx.Request.URL.Path, ctx.Request.Host, ctx.Request.RemoteAddr, err.Error())
-			Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
+			ctx.App.Logger.Critical("%s", buildLoginfo(ctx.Request, err))
+			//Error(ctx.ResponseWriter, err.Error(), http.StatusInternalServerError)
 		}
 
 	}
