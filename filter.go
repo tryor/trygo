@@ -7,7 +7,25 @@ import (
 
 func DefaultFilterHandler(app *App, h http.Handler) http.Handler {
 	h = BodyLimitHandler(app, h)
+	if app.Config.StatinfoEnable {
+		h = RequestStatHandler(app, h)
+	}
 	return h
+}
+
+func RequestStatHandler(app *App, handler http.Handler) http.Handler {
+	return &requestStatHandler{app, handler}
+}
+
+type requestStatHandler struct {
+	app     *App
+	handler http.Handler
+}
+
+func (h *requestStatHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	h.app.Statinfo.incCurrentRequests()
+	defer h.app.Statinfo.decCurrentRequests()
+	h.handler.ServeHTTP(rw, r)
 }
 
 func BodyLimitHandler(app *App, handler http.Handler) http.Handler {

@@ -75,21 +75,23 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 }
 
 func LimitListener(l net.Listener, app *App) net.Listener {
-	return &limitListener{l, make(chan struct{}, app.Config.Listen.Concurrency), app.Statinfo}
+	if app.Config.StatinfoEnable {
+		return &limitAndStatinfoListener{limitListener: limitListener{l, make(chan struct{}, app.Config.Listen.Concurrency)}, statinfo: app.Statinfo}
+	} else {
+		return &limitListener{l, make(chan struct{}, app.Config.Listen.Concurrency)}
+	}
+
 }
 
 type limitListener struct {
 	net.Listener
-	sem      chan struct{}
-	statinfo *statinfo
+	sem chan struct{}
 }
 
 func (l *limitListener) acquire() {
 	l.sem <- struct{}{}
-	l.statinfo.incConcurrentConns()
 }
 func (l *limitListener) release() {
-	l.statinfo.decConcurrentConns()
 	<-l.sem
 }
 
@@ -113,4 +115,28 @@ func (l *limitListenerConn) Close() error {
 	err := l.Conn.Close()
 	l.releaseOnce.Do(l.release)
 	return err
+}
+
+type limitAndStatinfoListener struct {
+	limitListener
+	statinfo *statinfo
+}
+
+func (l *limitAndStatinfoListener) Accept() (net.Conn, error) {
+	l.acquire()
+	c, err := l.Listener.Accept()
+	if err != nil {
+		l.release()
+		return nil, err
+	}
+	return &limitListenerConn{Conn: c, release: l.release}, nil
+}
+
+func (l *limitAndStatinfoListener) acquire() {
+	l.sem <- struct{}{}
+	l.statinfo.incConcurrentConns()
+}
+func (l *limitAndStatinfoListener) release() {
+	l.statinfo.decConcurrentConns()
+	<-l.sem
 }

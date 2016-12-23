@@ -34,6 +34,9 @@ type config struct {
 	//默认:true
 	PrintPanicDetail bool
 
+	//打开统计信息功能
+	StatinfoEnable bool
+
 	Render renderConfig
 }
 
@@ -84,6 +87,7 @@ func newConfig() *config {
 
 	cfg.RecoverFunc = defaultRecoverFunc
 	cfg.PrintPanicDetail = true
+	cfg.StatinfoEnable = false
 
 	cfg.Listen.Addr = "0.0.0.0:7086"
 	cfg.Listen.ReadTimeout = 0
