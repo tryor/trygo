@@ -71,7 +71,6 @@ func (s *statinfo) decCurrentRequests() {
 }
 
 func (s *statinfo) CurrentRequests() int64 {
-	Logger.Debug("atomicInt64Enable:%v", atomicInt64Enable)
 	if atomicInt64Enable {
 		return atomic.LoadInt64(&s.currentRequests)
 	} else {
