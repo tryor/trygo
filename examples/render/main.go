@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tryor/trygo"
+	//"github.com/tryor/trygo"
+	"tryor/trygo"
 )
 
 /**

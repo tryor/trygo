@@ -8,11 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	//	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
-	"path"
+	//	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -512,29 +512,63 @@ func RenderTemplate(ctx *Context, templateName string, data map[interface{}]inte
 }
 
 func BuildTemplateData(app *App, tplnames string, data map[interface{}]interface{}) ([]byte, error) {
-
-	_, file := path.Split(tplnames)
-	subdir := path.Dir(tplnames)
-	ibytes := bytes.NewBufferString("")
-
+	var buf bytes.Buffer
 	if app.Config.RunMode == DEV {
+		/*
+			buildFiles := []string{tplnames}
+			if c.Layout != "" {
+				buildFiles = append(buildFiles, c.Layout)
+				if c.LayoutSections != nil {
+					for _, sectionTpl := range c.LayoutSections {
+						if sectionTpl == "" {
+							continue
+						}
+						buildFiles = append(buildFiles, sectionTpl)
+					}
+				}
+			}
+		*/
 		app.buildTemplate()
 	}
+	err := executeTemplate(app, &buf, tplnames, data)
+	if err != nil {
+		return nil, err
+	}
 
-	t := app.TemplateRegister.Templates[subdir]
-	if t == nil {
-		return nil, errors.New(fmt.Sprintf("template not exist, tplnames:%s", tplnames))
-	}
-	err := t.ExecuteTemplate(ibytes, file, data)
-	if err != nil {
-		return nil, err
-	}
-	content, err := ioutil.ReadAll(ibytes)
-	if err != nil {
-		return nil, err
-	}
-	return content, nil
+	return buf.Bytes(), nil
+	//	content, err := ioutil.ReadAll(buf)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	return content, nil
 }
+
+//func BuildTemplateData(app *App, tplnames string, data map[interface{}]interface{}) ([]byte, error) {
+
+//	_, file := path.Split(tplnames)
+//	subdir := path.Dir(tplnames)
+//	ibytes := bytes.NewBufferString("")
+
+//	if app.Config.RunMode == DEV {
+//		app.buildTemplate()
+//	}
+//	fmt.Println("tplnames:", tplnames)
+//	fmt.Println("subdir:", subdir)
+//	fmt.Println("app.TemplateRegister.Templates:", app.TemplateRegister.Templates)
+//	t := app.TemplateRegister.Templates[subdir]
+//	if t == nil {
+//		return nil, errors.New(fmt.Sprintf("template not exist, tplnames:%s", tplnames))
+//	}
+//	err := t.ExecuteTemplate(ibytes, file, data)
+//	if err != nil {
+//		return nil, err
+//	}
+//	content, err := ioutil.ReadAll(ibytes)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return content, nil
+//}
 
 //fmtAndJsoncallback[0] - format, 值指示响应结果格式，当前支持:json或xml, 默认为:json
 //fmtAndJsoncallback[1] - jsoncallback 如果是json格式结果，支持jsoncallback

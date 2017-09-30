@@ -40,15 +40,20 @@ func ListenAndServe(port int, server ...trygo.Server) {
 	//app.Config.Listen.Concurrency = 10
 	//app.Config.MaxRequestBodySize = 1024 * 1024 * 8
 	//app.Config.AutoParseRequest = false
+	app.Config.StatinfoEnable = true
 
 	app.Get("/statinfo", func(ctx *trygo.Context) {
 		type Statinfo struct {
 			ConcurrentConns     int32
 			PeakConcurrentConns int32
+			CurrentRequests     int64
+			TotalRequests       int64
 		}
 		var statinfo Statinfo
 		statinfo.ConcurrentConns = app.Statinfo.ConcurrentConns()
 		statinfo.PeakConcurrentConns = app.Statinfo.PeakConcurrentConns()
+		statinfo.CurrentRequests = app.Statinfo.CurrentRequests()
+		statinfo.TotalRequests = app.Statinfo.TotalRequests()
 		ctx.Render(statinfo).Json()
 	})
 

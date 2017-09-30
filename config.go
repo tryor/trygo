@@ -12,6 +12,8 @@ type config struct {
 
 	//模板文件位置
 	TemplatePath string
+	TemplateLeft  string
+	TemplateRight string
 
 	//请求主体数据量大小限制, 默认：defaultMaxRequestBodySize
 	MaxRequestBodySize int64

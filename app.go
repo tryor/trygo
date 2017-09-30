@@ -113,9 +113,9 @@ func (app *App) SetViewsPath(path string) *App {
 	return app
 }
 
-func (app *App) buildTemplate() {
+func (app *App) buildTemplate(files ...string) {
 	if app.Config.TemplatePath != "" {
-		err := app.TemplateRegister.buildTemplate(app.Config.TemplatePath)
+		err := app.TemplateRegister.buildTemplate(app.Config.TemplatePath, files...)
 		if err != nil {
 			app.Logger.Error("%v", err)
 		}

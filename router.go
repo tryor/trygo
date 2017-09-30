@@ -139,8 +139,8 @@ func (r *defaultRouter) run(ctx *Context) {
 	}
 	controller.Init(r.app, ctx, r.controllerType.Name(), r.funcName)
 
-	controller.Prepare()
 	defer controller.Finish()
+	controller.Prepare()
 
 	if r.funcName == "" {
 		switch convMethod(ctx.Request.Method) {
@@ -430,11 +430,11 @@ func (this *ControllerRegister) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 	ctx.Reset(rw, r, this.app)
 	defer this.pool.Put(ctx)
 
-	if this.app.Config.RecoverFunc != nil {
-		defer this.app.Config.RecoverFunc(ctx)
-	} else {
-		defer defaultRecoverFunc(ctx)
-	}
+	//if this.app.Config.RecoverFunc != nil {
+	defer this.app.Config.RecoverFunc(ctx)
+	//} else {
+	//	defer defaultRecoverFunc(ctx)
+	//}
 
 	path := r.URL.Path
 	pathlen := len(path)
