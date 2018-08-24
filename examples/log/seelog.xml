@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<seelog type="asyncloop" minlevel="info" maxlevel="critical">
+    <outputs formatid="common">
+		<console/>
+        <rollingfile type="size" filename="logs/test.log" maxsize="104857600" maxrolls="10"/>
+        <filter levels="warn,error,critical">
+            <file path="logs/error.log" formatid="critical"/>
+        </filter>
+    </outputs>
+    <formats>
+        <format id="common" format="%Date %Time [%LEV] %RelFile/%Func(%Line) %Msg%n"/>
+        <format id="critical" format="%Date %Time [%LEV] %RelFile/%Func(%Line) %Msg%n"/>
+        <format id="criticalemail" format="Critical error on our server!\n    %Time %Date %RelFile %Func %Msg \nSent by Seelog"/>
+    </formats>
+</seelog>

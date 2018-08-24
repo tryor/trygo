@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Router Example</title>
+</head>
+<body>
+<h2>Router Example</h2>
+
+/router/get &nbsp 
+<a href="http://127.0.0.1:7086/router/get?p1=123&p2=abc">http://127.0.0.1:7086/router/get?p1=123&p2=abc</a> <br>
+
+/router/post
+<form action="/router/post" method="post">
+   <input  type="text" size="20" name="p1" value="123">
+   <input  type="text" size="20" name="p2" value="abc">
+   <input  type="submit" />
+</form>
+
+/router/func &nbsp 
+<a href="http://127.0.0.1:7086/router/func?p1=123&p2=abc">http://127.0.0.1:7086/router/func?p1=123&p2=abc</a> <br>
+
+/router/handler &nbsp
+<a href="http://127.0.0.1:7086/router/handler?p1=123&p2=abc">http://127.0.0.1:7086/router/handler?p1=123&p2=abc</a> <br>
+
+/router/restful &nbsp
+<a href="http://127.0.0.1:7086/router/restful/123">http://127.0.0.1:7086/router/restful/123</a> <br>
+
+/router/user/create &nbsp
+<form action="/router/user/create" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="name" value="demo">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="3" name="sex" value="1">
+   <input  type="text" size="3" name="age" value="18">
+   <input  type="text" size="15" name="email" value="trywen@qq.com">
+   <input  type="submit" />
+</form>
+
+/router/user/get &nbsp
+<a href="http://127.0.0.1:7086/router/user/get?id=235">http://127.0.0.1:7086/router/user/get?id=235</a> <br>
+
+/router/user/query/ &nbsp
+<a href="http://127.0.0.1:7086/router/user/query/2/10/id desc">http://127.0.0.1:7086/router/user/query/2/10/id desc</a> <br>
+
+/router/user/login &nbsp
+<form action="/router/user/login" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="10" name="devid" value="2">
+   <input  type="submit" />
+</form>
+/router/user/login2 &nbsp
+<form action="/router/user/login2" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="10" name="devid" value="2">
+   <input  type="submit" />
+</form>
+/router/user/edit &nbsp
+<form action="/router/user/edit" method="post" >
+   <input  type="text" size="10" name="account" value="demo001">
+   <input  type="text" size="10" name="name" value="demo">
+   <input  type="text" size="10" name="pwd" value="111111">
+   <input  type="text" size="3" name="sex" value="1">
+   <input  type="text" size="3" name="age" value="18">
+   <input  type="text" size="15" name="email" value="trywen@qq.com">
+   <input  type="submit" />
+</form>
+
+</body>
+</html>
