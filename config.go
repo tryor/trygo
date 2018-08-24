@@ -11,7 +11,7 @@ type config struct {
 	RunMode int8
 
 	//模板文件位置
-	TemplatePath string
+	TemplatePath  string
 	TemplateLeft  string
 	TemplateRight string
 
