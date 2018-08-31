@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type Context struct {
@@ -358,6 +359,8 @@ func (input *input) Bind(dest interface{}, key string, taginfos ...Taginfos) err
 	return nil
 }
 
+var timeType = reflect.TypeOf(time.Now())
+
 func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos) (*reflect.Value, error) {
 	ctx := input.ctx
 	vp := reflect.Indirect(reflect.New(ptype))
@@ -368,7 +371,7 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 		if reflect.Struct == kind {
 			return nil, errors.New("the parameter slice type is not supported")
 		} else {
-			vals := ctx.Input.Values[pname]
+			vals := input.Values[pname]
 			for _, str := range vals {
 				v := reflect.Indirect(reflect.New(ptype.Elem()))
 				if err := input.parseAndCheck(getTaginfo(pname, taginfos), kind, str, true, &v); err != nil {
@@ -378,8 +381,16 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 				vp = reflect.Append(vp, v)
 			}
 		}
+
 	case reflect.Struct:
 		tp := vp.Type()
+		if timeType == tp {
+			err := input.bindDefault(pname, ptype, &vp, taginfos...)
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
 		for i := 0; i < tp.NumField(); i++ {
 			f := tp.Field(i)
 			var name string
@@ -419,17 +430,24 @@ func (input *input) bind(pname string, ptype reflect.Type, taginfos ...Taginfos)
 		vp.Set(reflect.ValueOf(ctx.Input.Values))
 
 	default:
-		vals, ok := ctx.Input.Values[pname]
-		var val string
-		if ok {
-			val = vals[0]
-		}
-		if err := input.parseAndCheck(getTaginfo(pname, taginfos), ptype.Kind(), val, ok, &vp); err != nil {
-			//return nil, err
-			return nil, errors.New(fmt.Sprintf("%v=%v, %v", pname, val, err))
+		err := input.bindDefault(pname, ptype, &vp, taginfos...)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return &vp, nil
+}
+
+func (input *input) bindDefault(pname string, ptype reflect.Type, vp *reflect.Value, taginfos ...Taginfos) error {
+	vals, ok := input.Values[pname]
+	var val string
+	if ok {
+		val = vals[0]
+	}
+	if err := input.parseAndCheck(getTaginfo(pname, taginfos), ptype.Kind(), val, ok, vp); err != nil {
+		return errors.New(fmt.Sprintf("%v=%v, %v", pname, val, err))
+	}
+	return nil
 }
 
 //在vp中返回值

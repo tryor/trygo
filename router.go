@@ -271,7 +271,6 @@ func (this *ControllerRegister) Add(methods string, pattern string, c Controller
 				funcparam.isptr = true
 			}
 			methodParamTypes[funcparam.name] = ptype
-
 			//check struct
 			if ptype.Kind() == reflect.Struct {
 				for i := 0; i < ptype.NumField(); i++ {
