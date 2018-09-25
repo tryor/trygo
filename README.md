@@ -94,7 +94,7 @@ func (this *MainController) Create(userform UserForm) {
 	this.Render(user)
 }
 
-trygo.Register("GET|POST", "/user/create", &MainController{}, "Create(userform UserForm)")
+trygo.Register("POST", "/user/create", &MainController{}, "Create(userform UserForm)")
 
 
 
@@ -118,7 +118,7 @@ func (this *MainController) Login(account, pwd string) {
 }
 
 
-trygo.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
+trygo.Register("POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
 
 
 ```
