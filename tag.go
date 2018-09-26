@@ -17,6 +17,7 @@ var supportedTagitems = map[string]bool{
 	"default": true,
 	"require": false,
 	"pattern": true,
+	"layout":  true, //time format
 }
 
 type Taginfos map[string]*tagInfo
@@ -59,6 +60,7 @@ type tagInfo struct {
 	Scope    scopeTag
 	Default  defaultTag
 	Pattern  patternTag
+	Layout   layoutTag
 }
 
 func (this *tagInfo) String() string {
@@ -129,15 +131,19 @@ func (this *tagInfo) Check(v interface{}, dest ...interface{}) error {
 		}
 	}
 
-	//	Logger.Debug("rvalTypeKind:%v", rvalTypeKind)
-	//	Logger.Debug("destTypeKind:%v", destTypeKind)
-	//	Logger.Debug("tagTypeKind:%v", tagTypeKind)
+	//time layouts
+	var layouts []string
+	if timeType == destValue.Type() {
+		if this.Layout.Exist {
+			layouts = this.Layout.Terms
+		}
+	}
 
 	var val interface{}
 	if len(dest) > 0 {
 		if rvalTypeKind != destTypeKind {
 			var err error
-			_, err = parseValue(strval, destTypeKind, &destValue)
+			_, err = parseValue(strval, destTypeKind, &destValue, layouts...)
 			if err != nil {
 				return err
 			}
@@ -194,6 +200,11 @@ type defaultTag struct {
 type patternTag struct {
 	tagItem
 	Regexp *regexp.Regexp
+}
+
+type layoutTag struct {
+	tagItem
+	Terms []string
 }
 
 //pnames key is parmeter name, value is parmeter type
@@ -275,9 +286,11 @@ func parseOneTag(kind reflect.Kind, tag string) *tagInfo {
 
 const inputTagname = "param"
 
+//var timeType = reflect.TypeOf(time.Now())
+
 func parseTag(pname string, ptype reflect.Type, tag string, formDomainModel bool, formatedTags Taginfos) {
 	kind := ptype.Kind()
-	if kind == reflect.Struct {
+	if kind == reflect.Struct && timeType != ptype {
 		for i := 0; i < ptype.NumField(); i++ {
 			stag := tag
 			f := ptype.Field(i)
@@ -400,6 +413,12 @@ func parseTagItems(kind reflect.Kind, tag string) *tagInfo {
 		}
 
 	}
+
+	if layout, ok := tagitemmap["layout"]; ok {
+		tagInfo.Layout.Terms = strings.Split(layout, "|")
+		tagInfo.Layout.Exist = true
+	}
+
 	tagInfo.TypeKind = kind
 
 	return tagInfo
