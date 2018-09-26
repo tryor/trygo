@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -18,6 +19,16 @@ const (
 	chunkSize        = 4 << 10  // 4 KB chunks
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
+
+func parseTime(layouts []string, str string) (t time.Time, err error) {
+	for _, layout := range layouts {
+		t, err = time.Parse(layout, str)
+		if err == nil {
+			return
+		}
+	}
+	return
+}
 
 func toString(v interface{}) string {
 	switch s := v.(type) {
@@ -105,7 +116,7 @@ func newValueOf(kind reflect.Kind) (*reflect.Value, error) {
 //srcValue - 原值
 //destValue - 在destValue中返回与之相同类型的值, 如果不指定destValue，将自动创建    //destType - 转换目标类型
 //@return 与destType相同类型的值
-func parseValue(srcValue string, destTypeKind reflect.Kind, destValue *reflect.Value) (*reflect.Value, error) {
+func parseValue(srcValue string, destTypeKind reflect.Kind, destValue *reflect.Value, layouts ...string) (*reflect.Value, error) {
 	var err error
 	if destValue == nil {
 		destValue, err = newValueOf(destTypeKind)
@@ -144,6 +155,19 @@ func parseValue(srcValue string, destTypeKind reflect.Kind, destValue *reflect.V
 			destValue.SetFloat(v.(float64))
 		}
 	default:
+		if timeType == destValue.Type() {
+			if len(layouts) == 0 {
+				layouts = []string{"2006-01-02", "2006-01-02 15:04:05"}
+			}
+			var t time.Time
+			t, err = parseTime(layouts, srcValue)
+			if err != nil {
+				break
+			}
+			destValue.Set(reflect.ValueOf(t))
+			break
+		}
+
 		err = errors.New("the type (" + destTypeKind.String() + ") is not supported")
 	}
 

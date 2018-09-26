@@ -14,7 +14,7 @@ type Result struct {
 
 func (r *Result) String() string {
 	if r.Code == ERROR_CODE_OK {
-		return fmt.Sprint(r.Info)
+		return "[" + strconv.Itoa(r.Code) + "] " + fmt.Sprint(r.Info)
 	} else {
 		return "[" + strconv.Itoa(r.Code) + "] " + r.Message
 	}
@@ -55,6 +55,12 @@ func NewErrorResult(code int, msgs ...interface{}) *Result {
 }
 
 func NewSucceedResult(info interface{}) *Result {
+	switch s := info.(type) {
+	case string:
+		if s == "" {
+			return &Result{Code: ERROR_CODE_OK}
+		}
+	}
 	return &Result{Code: ERROR_CODE_OK, Info: info}
 }
 
