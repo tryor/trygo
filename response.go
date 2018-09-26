@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
 	//	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
+
 	//	"path"
 	"reflect"
 	"strconv"
@@ -493,12 +495,13 @@ func Render(ctx *Context, data ...interface{}) *render {
 	}
 
 	render.started = true
-	if len(data) > 0 {
-		if len(data) == 1 {
-			render.Data(data[0])
-		} else {
-			render.Data(data)
-		}
+	switch len(data) {
+	case 0:
+		render.Data("")
+	case 1:
+		render.Data(data[0])
+	default:
+		render.Data(data)
 	}
 	return render
 }
