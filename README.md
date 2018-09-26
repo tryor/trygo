@@ -67,18 +67,19 @@ for example：
 ```go
 
 Http handler method parameter is struct, the struct field tag name is `param`,
-tag attributes will have name,limit,scope,default,require,pattern, for example:
+tag attributes will have name,limit,scope,default,require,pattern,layout for example:
 `param:"name,limit:20,scope:[1 2 3],default:1,require,pattern:xxxxx"`
 scope: [1 2 3] or [1~100] or [0~] or [~0] or [100~] or [~100] or [~-100 -20~-10 -1 0 1 2 3 10~20 100~]
 
 type UserForm struct {
-	Account string `param:"account,limit:20,require"` 
-	Pwd     string `param:"pwd,limit:10,require"`
-	Name    string `param:"name,limit:20"`
-	Sex     int    `param:"sex,scope:[1 2 3],default:1"` 
-	Age     uint   `param:"age,scope:[0~200]"` 
-	Email   string `param:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"` 
-	Photo   string
+	Account  string `param:"account,limit:20,require"` 
+	Pwd      string `param:"pwd,limit:10,require"`
+	Name     string `param:"name,limit:20"`
+	Sex      int    `param:"sex,scope:[1 2 3],default:1"` 
+	Age      uint   `param:"age,scope:[0~200]"` 
+	Birthday time.Time `param:"birthday,layout:2006-01-02|2006-01-02 15:04:05"` 
+	Email    string `param:"email,limit:30,pattern:\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*"` 
+	Photo    string
 }
 
 
@@ -93,7 +94,7 @@ func (this *MainController) Create(userform UserForm) {
 	this.Render(user)
 }
 
-trygo.Register("GET|POST", "/user/create", &MainController{}, "Create(userform UserForm)")
+trygo.Register("POST", "/user/create", &MainController{}, "Create(userform UserForm)")
 
 
 
@@ -117,7 +118,7 @@ func (this *MainController) Login(account, pwd string) {
 }
 
 
-trygo.Register("GET|POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
+trygo.Register("POST", "/user/login", &MainController{}, "Login(account, pwd string)", LoginTags...)
 
 
 ```
