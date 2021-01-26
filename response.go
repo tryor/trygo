@@ -497,7 +497,7 @@ func Render(ctx *Context, data ...interface{}) *render {
 	render.started = true
 	switch len(data) {
 	case 0:
-		render.Data("")
+		//render.Data("")
 	case 1:
 		render.Data(data[0])
 	default:
