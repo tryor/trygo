@@ -1,3 +1,5 @@
+[toc]
+
 ## trygo
 =======
 trygo 是基于Golang的http、web服务框架。此框架的目标并不是想做一个大而全的web服务容器，它主要用于开发底层高性能高可靠性的http服务。支持如下特性：RESTful,MVC,类型内方法路由、正则路由,JSON/JSON(JQueryCallback)/XML结果响应支持，模板，静态文件输出，net.Listener过滤，http.Handler过滤。暂时不支持会话管理模块。
